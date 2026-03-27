@@ -19,6 +19,7 @@ const reportsRouter    = require('./modules/reports/reports.router');
 const settingsRouter   = require('./modules/settings/settings.router');
 
 // Admin routers
+const adminAuthRouter    = require('./modules/admin/auth/admin.auth.router');
 const adminShopsRouter   = require('./modules/admin/shops/shops.router');
 const adminUsersRouter   = require('./modules/admin/users/users.router');
 const adminPlansRouter   = require('./modules/admin/plans/plans.router');
@@ -48,6 +49,7 @@ app.use('/api/reports',     reportsRouter);
 app.use('/api/settings',    settingsRouter);
 
 // Admin routes
+app.use('/api/admin/auth',    adminAuthRouter);
 app.use('/api/admin/shops',   adminShopsRouter);
 app.use('/api/admin/users',   adminUsersRouter);
 app.use('/api/admin/plans',   adminPlansRouter);

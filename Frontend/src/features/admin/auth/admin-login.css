@@ -1,0 +1,236 @@
+/* ── Admin Login Page — Light Maroon Theme ───────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+.al-root {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  background: #f5f0f1;
+  position: relative;
+  overflow: hidden;
+  padding: 1rem;
+}
+
+/* Soft background shapes */
+.al-root::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 55% 45% at 15% 10%, rgba(168,0,40,0.08) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 50% at 85% 90%, rgba(139,0,32,0.07) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+/* Decorative orbs (subtle) */
+.al-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 1;
+  pointer-events: none;
+  animation: al-float 12s ease-in-out infinite;
+}
+.al-orb--1 {
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(192,0,48,0.10), transparent 70%);
+  top: -140px; left: -100px;
+  animation-delay: 0s;
+}
+.al-orb--2 {
+  width: 320px; height: 320px;
+  background: radial-gradient(circle, rgba(168,0,40,0.08), transparent 70%);
+  bottom: -80px; right: -80px;
+  animation-delay: -5s;
+}
+.al-orb--3 {
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(220,60,80,0.06), transparent 70%);
+  top: 45%; left: 60%;
+  animation-delay: -8s;
+}
+@keyframes al-float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%       { transform: translateY(-16px) scale(1.04); }
+}
+
+/* Card */
+.al-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  border: 1px solid rgba(168,0,40,0.10);
+  border-radius: 20px;
+  padding: 2.5rem 2rem;
+  box-shadow:
+    0 1px 4px rgba(0,0,0,0.05),
+    0 12px 40px rgba(168,0,40,0.08),
+    0 32px 64px rgba(0,0,0,0.06);
+}
+
+/* Brand */
+.al-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 2rem;
+}
+.al-logo {
+  width: 42px; height: 42px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #c0002e, #8b0020);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 14px rgba(168,0,40,0.3);
+}
+.al-brand-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1a1015;
+  letter-spacing: -0.02em;
+}
+
+/* Header */
+.al-header { margin-bottom: 1.75rem; }
+.al-title {
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: #1a1015;
+  margin: 0 0 0.35rem;
+  letter-spacing: -0.03em;
+}
+.al-subtitle {
+  font-size: 0.85rem;
+  color: #8a6875;
+  margin: 0;
+}
+
+/* Error */
+.al-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff5f6;
+  border: 1px solid rgba(220,38,38,0.2);
+  color: #b91c1c;
+  font-size: 0.83rem;
+  border-radius: 9px;
+  padding: 10px 12px;
+  margin-bottom: 1.25rem;
+}
+
+/* Form */
+.al-form { display: flex; flex-direction: column; gap: 1rem; }
+
+.al-field { display: flex; flex-direction: column; gap: 6px; }
+.al-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #5a3d48;
+  letter-spacing: 0.02em;
+}
+
+/* Input */
+.al-input-wrap { position: relative; display: flex; align-items: center; }
+.al-input-icon {
+  position: absolute;
+  left: 11px;
+  color: #b0919d;
+  pointer-events: none;
+}
+.al-input {
+  width: 100%;
+  padding: 11px 12px 11px 36px;
+  background: #f8f4f5;
+  border: 1px solid #e5dce0;
+  border-radius: 9px;
+  color: #1a1015;
+  font-size: 0.875rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  box-sizing: border-box;
+}
+.al-input::placeholder { color: #c4a8b0; }
+.al-input:focus {
+  border-color: #a80028;
+  box-shadow: 0 0 0 3px rgba(168,0,40,0.1);
+  background: #fff;
+}
+.al-input:disabled { opacity: 0.5; cursor: not-allowed; }
+.al-input--pw { padding-right: 44px; }
+
+/* Eye toggle */
+.al-eye {
+  position: absolute;
+  right: 10px;
+  background: none; border: none;
+  cursor: pointer;
+  color: #b0919d;
+  display: flex; align-items: center;
+  padding: 4px;
+  transition: color 0.2s;
+  border-radius: 4px;
+}
+.al-eye:hover { color: #5a3d48; }
+
+/* Submit */
+.al-submit {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-top: 6px;
+  padding: 12px 1rem;
+  background: linear-gradient(135deg, #c0002e, #8b0020);
+  border: none;
+  border-radius: 9px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 4px 16px rgba(139,0,32,0.35);
+}
+.al-submit:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 22px rgba(139,0,32,0.45);
+}
+.al-submit:active:not(:disabled) { transform: translateY(0); }
+.al-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Spinner */
+.al-spinner {
+  width: 15px; height: 15px;
+  border: 2px solid rgba(255,255,255,0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: al-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes al-spin { to { transform: rotate(360deg); } }
+
+/* Divider */
+.al-divider {
+  display: flex; align-items: center; gap: 10px;
+  margin: 4px 0;
+}
+.al-divider-line { flex: 1; height: 1px; background: #ede5e8; }
+.al-divider-text {
+  font-size: 0.7rem;
+  color: #c4a8b0;
+  letter-spacing: 0.06em;
+}
+
+/* Footer */
+.al-footer-note {
+  margin: 1.5rem 0 0;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #c4a8b0;
+  letter-spacing: 0.02em;
+}
