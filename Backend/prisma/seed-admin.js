@@ -8,11 +8,11 @@ const bcrypt = require('bcryptjs');
 const db = new PrismaClient();
 
 async function main() {
-  const { ADMIN_NAME, ADMIN_EMAIL, ADMIN_USERNAME, ADMIN_PASSWORD } = process.env;
+  const { ADMIN_NAME, ADMIN_EMAIL, ADMIN_PASSWORD } = process.env;
 
-  if (!ADMIN_EMAIL || !ADMIN_USERNAME || !ADMIN_PASSWORD) {
+  if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
     throw new Error(
-      'Missing admin credentials. Set ADMIN_NAME, ADMIN_EMAIL, ADMIN_USERNAME, ADMIN_PASSWORD in your .env file.'
+      'Missing admin credentials. Set ADMIN_NAME, ADMIN_EMAIL, ADMIN_PASSWORD in your .env file.'
     );
   }
 
@@ -26,14 +26,11 @@ async function main() {
     create: {
       name:         ADMIN_NAME || 'Admin',
       email:        ADMIN_EMAIL,
-      username:     ADMIN_USERNAME,
       passwordHash,
-      isActive:     true,
-      forcePasswordChange: false,
     },
   });
 
-  console.log(`  ✓ Admin created: ${admin.email} (username: ${admin.username})`);
+  console.log(`  ✓ Admin created: ${admin.email}`);
   console.log('Done.');
 }
 
