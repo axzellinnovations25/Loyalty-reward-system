@@ -18,8 +18,12 @@ export default function AdminLoginPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await adminAuthApi.login({ email, password });
-      setAdminAuth(res.admin, res.token);
+      // API client returns the full envelope: { success, data: { token, admin } }
+      const envelope = await adminAuthApi.login({ email, password }) as unknown as {
+        data: { token: string; admin: { id: string; name: string; email: string } };
+      };
+      const { token, admin } = envelope.data;
+      setAdminAuth(admin, token);
       navigate('/admin/dashboard', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
