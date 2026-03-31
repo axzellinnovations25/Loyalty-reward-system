@@ -3,7 +3,7 @@
 const db = require('../../../config/db');
 const { parsePagination, buildMeta } = require('../../../utils/pagination');
 
-const SELECT = { id: true, name: true, email: true, shopId: true, isActive: true, createdAt: true, username: true, forcePasswordChange: true };
+const SELECT = { id: true, name: true, shopId: true, isActive: true, createdAt: true, username: true, forcePasswordChange: true };
 
 async function findAll(query) {
   const { skip, take, page, limit } = parsePagination(query);

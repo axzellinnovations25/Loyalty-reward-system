@@ -318,7 +318,7 @@ function ManageShopModal({ shop, onClose, onUserAdded }: ManageShopModalProps) {
   const [loadingUsers, setLoadingUsers] = useState(true);
 
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loadingAdd, setLoadingAdd] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -357,8 +357,8 @@ function ManageShopModal({ shop, onClose, onUserAdded }: ManageShopModalProps) {
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !password.trim()) {
-      setError('Name, email, and password are required.');
+    if (!name.trim() || !username.trim() || !password.trim()) {
+      setError('Name, username, and password are required.');
       return;
     }
     setLoadingAdd(true);
@@ -366,12 +366,12 @@ function ManageShopModal({ shop, onClose, onUserAdded }: ManageShopModalProps) {
     try {
       await adminUsersApi.create({
         name: name.trim(),
-        email: email.trim(),
+        username: username.trim(),
         password: password.trim(),
         shopId: shop.id,
       });
       onUserAdded(`User ${name.trim()} added to ${shop.name}!`);
-      setName(''); setEmail(''); setPassword('');
+      setName(''); setUsername(''); setPassword('');
       fetchUsers(); // refresh the list
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to create user account.');
@@ -453,10 +453,10 @@ function ManageShopModal({ shop, onClose, onUserAdded }: ManageShopModalProps) {
               </div>
 
               <div style={{ marginBottom: 14 }}>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: 6 }}>Email Login</label>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: 6 }}>Login Username</label>
                 <input
-                  type="email" className="adm-input" placeholder="john@example.com"
-                  value={email} onChange={e => setEmail(e.target.value)} required
+                  type="text" className="adm-input" placeholder="e.g. john_doe"
+                  value={username} onChange={e => setUsername(e.target.value)} required
                 />
               </div>
 
@@ -502,7 +502,7 @@ function ManageShopModal({ shop, onClose, onUserAdded }: ManageShopModalProps) {
                     </div>
                     <div style={{ flex: 1, overflow: 'hidden' }}>
                       <div style={{ fontSize: '0.83rem', fontWeight: 600, color: 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{u.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{u.email}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>@{u.username}</div>
                     </div>
                     {u.isActive ? (
                       <span className="adm-badge adm-badge--green" style={{ fontSize: '0.65rem' }}>Active</span>

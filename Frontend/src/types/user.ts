@@ -2,8 +2,7 @@ export interface User {
   id: string;
   shopId: string;
   name: string;
-  email: string;
-  username: string | null;
+  username: string;
   isActive: boolean;
   forcePasswordChange: boolean;
   lastLoginAt: string | null;
@@ -12,14 +11,14 @@ export interface User {
 
 export interface CreateUserRequest {
   name: string;
-  email: string;
-  username?: string;
+  username: string;
   password: string;
+  shopId: string;
 }
 
 export interface UpdateUserRequest {
   name?: string;
-  email?: string;
+  username?: string;
   isActive?: boolean;
 }
 

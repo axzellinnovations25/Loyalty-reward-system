@@ -13,10 +13,10 @@ async function getById(id) {
 }
 
 async function create(data) {
-  const existing = await db.user.findFirst({ 
-    where: { shopId: data.shopId, email: data.email } 
+  const existing = await db.user.findUnique({ 
+    where: { username: data.username } 
   });
-  if (existing) throw Object.assign(new Error('Email already in use for this shop'), { status: 409 });
+  if (existing) throw Object.assign(new Error('Username is already taken'), { status: 409 });
 
   const passwordHash = await bcrypt.hash(data.password, 12);
   const { password, ...userData } = data;
