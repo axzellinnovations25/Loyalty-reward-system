@@ -13,11 +13,14 @@ async function getById(id) {
 }
 
 async function create(data) {
-  const existing = await db.user.findUnique({ where: { email: data.email } });
-  if (existing) throw Object.assign(new Error('Email already in use'), { status: 409 });
+  const existing = await db.user.findFirst({ 
+    where: { shopId: data.shopId, email: data.email } 
+  });
+  if (existing) throw Object.assign(new Error('Email already in use for this shop'), { status: 409 });
 
   const passwordHash = await bcrypt.hash(data.password, 12);
-  return repository.create({ ...data, password: undefined, passwordHash });
+  const { password, ...userData } = data;
+  return repository.create({ ...userData, passwordHash });
 }
 
 async function update(id, data) {

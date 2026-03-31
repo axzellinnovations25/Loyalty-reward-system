@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { adminShopsApi } from '../../../api/admin/shops';
-import type { Shop, PlanId } from '../../../types';
+import { adminUsersApi } from '../../../api/admin/users';
+import type { Shop, PlanId, User } from '../../../types';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -286,6 +287,221 @@ function AddShopModal({ onClose, onCreated }: AddShopModalProps) {
   );
 }
 
+// ── Manage Shop Modal ────────────────────────────────────────────────────────
+
+interface ManageShopModalProps {
+  shop: Shop;
+  onClose: () => void;
+  onUserAdded: (msg: string) => void;
+}
+
+function ManageShopModal({ shop, onClose, onUserAdded }: ManageShopModalProps) {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loadingAdd, setLoadingAdd] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  const fetchUsers = useCallback(async () => {
+    try {
+      setLoadingUsers(true);
+      const res = await adminUsersApi.list({ shopId: shop.id });
+      // Ensure we unwrap { success, data } based on different formats
+      const raw = res as unknown as { data?: User[] | { items: User[] }; items?: User[] };
+      let list: User[] = [];
+      if (Array.isArray(raw.data)) list = raw.data;
+      else if (raw.data && 'items' in raw.data) list = raw.data.items;
+      else if (Array.isArray(raw.items)) list = raw.items;
+      setUsers(list);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingUsers(false);
+    }
+  }, [shop.id]);
+
+  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+
+  // Click outside to close
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (e.target === overlayRef.current) onClose();
+  };
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      setError('Name, email, and password are required.');
+      return;
+    }
+    setLoadingAdd(true);
+    setError(null);
+    try {
+      await adminUsersApi.create({
+        name: name.trim(),
+        email: email.trim(),
+        password: password.trim(),
+        shopId: shop.id,
+      });
+      onUserAdded(`User ${name.trim()} added to ${shop.name}!`);
+      setName(''); setEmail(''); setPassword('');
+      fetchUsers(); // refresh the list
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to create user account.');
+    } finally {
+      setLoadingAdd(false);
+    }
+  };
+
+  return (
+    <div
+      ref={overlayRef}
+      onClick={handleOverlayClick}
+      style={{
+        position: 'fixed', inset: 0,
+        background: 'rgba(15,10,12,0.55)',
+        backdropFilter: 'blur(3px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 1000,
+        animation: 'adm-fade-in 0.15s ease',
+      }}
+    >
+      <div
+        style={{
+          background: 'var(--white)', borderRadius: 'var(--r-xl)',
+          boxShadow: 'var(--shadow-lg)', width: '100%', maxWidth: 700,
+          margin: '0 16px', overflow: 'hidden', display: 'flex', flexDirection: 'column',
+          maxHeight: '90vh',
+          animation: 'adm-slide-up 0.2s ease',
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '20px 24px 16px', borderBottom: '1px solid var(--border)',
+        }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: '0.97rem', color: 'var(--text-primary)' }}>Manage Shop: {shop.name}</div>
+            <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: 1 }}>
+              Configure shop properties and staff accounts
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: 6, borderRadius: 6, color: 'var(--text-secondary)',
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M2 2l12 12M14 2L2 14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+          {/* Left panel: Admin user creation form */}
+          <div style={{ flex: 1, padding: '24px', borderRight: '1px solid var(--border)', overflowY: 'auto' }}>
+            <h3 style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>Add Staff Account</h3>
+            
+            <form onSubmit={handleCreateUser}>
+              {error && (
+                <div style={{
+                  background: 'var(--danger-bg)', border: '1px solid rgba(220,38,38,0.2)',
+                  borderRadius: 'var(--r-sm)', padding: '10px 14px',
+                  color: 'var(--danger)', fontSize: '0.83rem', fontWeight: 500,
+                  marginBottom: 16, display: 'flex', alignItems: 'flex-start', gap: 8,
+                }}>
+                  {error}
+                </div>
+              )}
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: 6 }}>Name</label>
+                <input
+                  type="text" className="adm-input" placeholder="e.g. John Doe"
+                  value={name} onChange={e => setName(e.target.value)} required
+                />
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: 6 }}>Email Login</label>
+                <input
+                  type="email" className="adm-input" placeholder="john@example.com"
+                  value={email} onChange={e => setEmail(e.target.value)} required
+                />
+              </div>
+
+              <div style={{ marginBottom: 18 }}>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: 6 }}>Initial Password</label>
+                <input
+                  type="text" className="adm-input" placeholder="Min 8 characters"
+                  value={password} onChange={e => setPassword(e.target.value)} minLength={8} required
+                />
+              </div>
+
+              <button type="submit" className="adm-btn adm-btn--primary" style={{ width: '100%' }} disabled={loadingAdd}>
+                {loadingAdd ? 'Adding...' : 'Create Shop Account'}
+              </button>
+            </form>
+          </div>
+
+          {/* Right panel: Active accounts */}
+          <div style={{ flex: 1, padding: '24px', overflowY: 'auto', background: 'var(--n-50)' }}>
+            <h3 style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>
+              Current Staff ({users.length})
+            </h3>
+            
+            {loadingUsers ? (
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Loading accounts...</div>
+            ) : users.length === 0 ? (
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', padding: '20px 0', textAlign: 'center' }}>
+                No standard user accounts exist.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {users.map(u => (
+                  <div key={u.id} style={{
+                    background: '#fff', border: '1px solid var(--border)', borderRadius: 'var(--r-md)',
+                    padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12
+                  }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: 16, background: 'var(--a-100)', color: 'var(--a-700)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.8rem',
+                      textTransform: 'uppercase'
+                    }}>
+                      {u.name.substring(0, 2)}
+                    </div>
+                    <div style={{ flex: 1, overflow: 'hidden' }}>
+                      <div style={{ fontSize: '0.83rem', fontWeight: 600, color: 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{u.name}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{u.email}</div>
+                    </div>
+                    {u.isActive ? (
+                      <span className="adm-badge adm-badge--green" style={{ fontSize: '0.65rem' }}>Active</span>
+                    ) : (
+                      <span className="adm-badge adm-badge--gray" style={{ fontSize: '0.65rem' }}>Inactive</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function ShopsPage() {
@@ -296,6 +512,7 @@ export default function ShopsPage() {
   const [search,     setSearch]     = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showModal,  setShowModal]  = useState(false);
+  const [managingShop, setManagingShop] = useState<Shop | null>(null);
   const [toast,      setToast]      = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
   // Debounce search
@@ -400,6 +617,15 @@ export default function ShopsPage() {
         />
       )}
 
+      {/* Manage Shop Modal (Add User) */}
+      {managingShop && (
+        <ManageShopModal
+          shop={managingShop}
+          onClose={() => setManagingShop(null)}
+          onUserAdded={(msg) => setToast({ msg, type: 'success' })}
+        />
+      )}
+
       {/* Top bar */}
       <header className="adm-topbar">
         <span className="adm-topbar-title">Shops</span>
@@ -495,9 +721,7 @@ export default function ShopsPage() {
                         <div style={{
                           height: 14,
                           borderRadius: 6,
-                          background: 'linear-gradient(90deg, var(--n-100) 25%, var(--n-50) 50%, var(--n-100) 75%)',
-                          backgroundSize: '200% 100%',
-                          animation: 'adm-spin 1.5s linear infinite',
+                          background: 'var(--n-100)',
                           width: j === 0 ? 20 : j === 6 ? 80 : '70%',
                         }}/>
                       </td>
@@ -566,6 +790,7 @@ export default function ShopsPage() {
                           <button
                             className="adm-btn adm-btn--ghost"
                             style={{ padding: '5px 10px', fontSize: '0.78rem' }}
+                            onClick={() => setManagingShop(shop)}
                           >
                             Manage
                           </button>

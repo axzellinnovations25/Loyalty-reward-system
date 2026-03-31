@@ -97,7 +97,8 @@ model PlanFeature {
 model Shop {
   id             String    @id @default(uuid()) @db.Uuid
   name           String
-  contactInfo    String?
+  phone          String?   // Renamed from contactInfo
+  email          String    @unique
   planId         String
   planAssignedAt DateTime  @default(now())
   planAssignedBy String?   @db.Uuid
@@ -165,8 +166,7 @@ model User {
   id                  String    @id @default(uuid()) @db.Uuid
   shopId              String    @db.Uuid
   name                String
-  email               String
-  username            String?
+  username            String    @unique // Unique identifier for staff login
   passwordHash        String
   isActive            Boolean   @default(true)
   forcePasswordChange Boolean   @default(false)
@@ -180,8 +180,6 @@ model User {
   giftCardsCreated GiftCard[]   @relation("GiftCardCreatedBy")
   giftCardsUsed    GiftCard[]   @relation("GiftCardUsedBy")
   auditLogs        AuditLog[]
-
-  @@unique([shopId, email])
 }
 
 // ─── Customers ───────────────────────────────────────────────────────────────

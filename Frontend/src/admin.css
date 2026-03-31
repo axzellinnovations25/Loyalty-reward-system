@@ -395,9 +395,6 @@
   vertical-align: middle;
 }
 .adm-table tr:last-child td { border-bottom: none; }
-.adm-table tbody tr {
-  transition: background 0.12s;
-}
 .adm-table tbody tr:hover { background: var(--a-50); }
 
 /* ── Buttons ────────────────────────────────────────────────── */

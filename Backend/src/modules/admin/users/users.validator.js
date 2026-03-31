@@ -6,14 +6,15 @@ const createSchema = Joi.object({
   name: Joi.string().min(2).max(100).required(),
   email: Joi.string().email().required(),
   password: Joi.string().min(8).required(),
-  role: Joi.string().valid('admin', 'owner', 'staff').required(),
-  shopId: Joi.string().optional(),
+  shopId: Joi.string().uuid().required(),
+  username: Joi.string().optional().allow(null, ''),
+  forcePasswordChange: Joi.boolean().optional(),
 });
 
 const updateSchema = Joi.object({
   name: Joi.string().min(2).max(100),
-  role: Joi.string().valid('admin', 'owner', 'staff'),
   isActive: Joi.boolean(),
+  forcePasswordChange: Joi.boolean(),
 }).min(1);
 
 function validateBody(schema) {
