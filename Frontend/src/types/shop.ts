@@ -1,6 +1,7 @@
 export interface Shop {
   id: string;
   name: string;
+  email: string;
   contactInfo: string | null;
   planId: string;
   planAssignedAt: string;
@@ -12,12 +13,14 @@ export interface Shop {
 
 export interface CreateShopRequest {
   name: string;
+  email: string;
   contactInfo?: string;
   planId: string;
 }
 
 export interface UpdateShopRequest {
   name?: string;
+  email?: string;
   contactInfo?: string;
   isActive?: boolean;
 }

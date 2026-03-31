@@ -46,6 +46,7 @@ interface AddShopModalProps {
 
 function AddShopModal({ onClose, onCreated }: AddShopModalProps) {
   const [name,        setName]        = useState('');
+  const [email,       setEmail]       = useState('');
   const [contactInfo, setContactInfo] = useState('');
   const [planId,      setPlanId]      = useState<PlanId>('basic');
   const [loading,     setLoading]     = useState(false);
@@ -70,12 +71,13 @@ function AddShopModal({ onClose, onCreated }: AddShopModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) { setError('Shop name is required.'); return; }
+    if (!name.trim() || !email.trim()) { setError('Shop name and email are required.'); return; }
     setLoading(true);
     setError(null);
     try {
       const res = await adminShopsApi.create({
         name: name.trim(),
+        email: email.trim(),
         contactInfo: contactInfo.trim() || undefined,
         planId,
       });
@@ -189,17 +191,33 @@ function AddShopModal({ onClose, onCreated }: AddShopModalProps) {
             />
           </div>
 
-          {/* Contact Info */}
+          {/* Email */}
           <div style={{ marginBottom: 18 }}>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
-              Contact Info
+              Shop Email <span style={{ color: 'var(--danger)' }}>*</span>
+            </label>
+            <input
+              id="add-shop-email"
+              type="email"
+              className="adm-input"
+              placeholder="e.g. shop@example.com"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+            />
+          </div>
+
+          {/* Contact Info (Phone) */}
+          <div style={{ marginBottom: 18 }}>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+              Phone Number
               <span style={{ fontSize: '0.72rem', fontWeight: 400, color: 'var(--text-secondary)', marginLeft: 6 }}>optional</span>
             </label>
             <input
               id="add-shop-contact"
-              type="text"
+              type="tel"
               className="adm-input"
-              placeholder="Phone, email, or address"
+              placeholder="e.g. +1 234 567 890"
               value={contactInfo}
               onChange={e => setContactInfo(e.target.value)}
               maxLength={200}
@@ -770,8 +788,9 @@ export default function ShopsPage() {
                       <td>
                         <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{shop.name}</div>
                       </td>
-                      <td style={{ color: 'var(--text-secondary)', fontFamily: 'monospace', fontSize: '0.82rem' }}>
-                        {shop.contactInfo || <span style={{ color: 'var(--n-200)' }}>—</span>}
+                      <td style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
+                        <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{shop.email}</div>
+                        <div style={{ fontFamily: 'monospace', marginTop: 2 }}>{shop.contactInfo || <span style={{ color: 'var(--n-200)' }}>—</span>}</div>
                       </td>
                       <td>
                         <span className={`adm-badge ${PLAN_BADGE[planId] ?? 'adm-badge--gray'}`} style={{ textTransform: 'capitalize' }}>

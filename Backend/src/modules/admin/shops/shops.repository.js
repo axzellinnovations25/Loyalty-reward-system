@@ -29,11 +29,12 @@ async function findById(id) {
   });
 }
 
-async function create({ name, contactInfo, planId, planAssignedBy }) {
+async function create({ name, email, contactInfo, planId, planAssignedBy }) {
   return db.$transaction(async (tx) => {
     const shop = await tx.shop.create({
       data: {
         name,
+        email,
         contactInfo: contactInfo || null,
         planId,
         planAssignedAt: new Date(),

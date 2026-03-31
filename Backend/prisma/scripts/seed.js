@@ -7,55 +7,47 @@ const db = new PrismaClient();
 
 const plans = [
   {
-    slug: 'free',
-    name: 'Free',
-    priceMonthly: 0,
-    sortOrder: 1,
+    id: 'basic',
+    name: 'Basic',
     features: [],
     limits: [
-      { limitKey: 'customers',     value: 100 },
-      { limitKey: 'sms_per_month', value: 0 },
-      { limitKey: 'gift_cards',    value: 0 },
-      { limitKey: 'staff_accounts',value: 1 },
+      { limitKey: 'customers',     limitValue: 100 },
+      { limitKey: 'sms_per_month', limitValue: 0 },
+      { limitKey: 'gift_cards',    limitValue: 0 },
+      { limitKey: 'staff_accounts',limitValue: 1 },
     ],
   },
   {
-    slug: 'starter',
-    name: 'Starter',
-    priceMonthly: 2500,
-    sortOrder: 2,
+    id: 'standard',
+    name: 'Standard',
     features: ['sms_campaigns', 'points_expiry'],
     limits: [
-      { limitKey: 'customers',     value: 500 },
-      { limitKey: 'sms_per_month', value: 500 },
-      { limitKey: 'gift_cards',    value: 50 },
-      { limitKey: 'staff_accounts',value: 3 },
+      { limitKey: 'customers',     limitValue: 500 },
+      { limitKey: 'sms_per_month', limitValue: 500 },
+      { limitKey: 'gift_cards',    limitValue: 50 },
+      { limitKey: 'staff_accounts',limitValue: 3 },
     ],
   },
   {
-    slug: 'growth',
-    name: 'Growth',
-    priceMonthly: 5000,
-    sortOrder: 3,
+    id: 'pro',
+    name: 'Pro',
     features: ['sms_campaigns', 'points_expiry', 'gift_cards', 'advanced_reports', 'custom_rewards'],
     limits: [
-      { limitKey: 'customers',     value: 2000 },
-      { limitKey: 'sms_per_month', value: 2000 },
-      { limitKey: 'gift_cards',    value: 500 },
-      { limitKey: 'staff_accounts',value: 10 },
+      { limitKey: 'customers',     limitValue: 2000 },
+      { limitKey: 'sms_per_month', limitValue: 2000 },
+      { limitKey: 'gift_cards',    limitValue: 500 },
+      { limitKey: 'staff_accounts',limitValue: 10 },
     ],
   },
   {
-    slug: 'pro',
-    name: 'Pro',
-    priceMonthly: 10000,
-    sortOrder: 4,
+    id: 'enterprise',
+    name: 'Enterprise',
     features: ['sms_campaigns', 'points_expiry', 'gift_cards', 'advanced_reports', 'custom_rewards', 'multi_tier', 'api_access', 'white_label'],
     limits: [
-      { limitKey: 'customers',     value: -1 },
-      { limitKey: 'sms_per_month', value: -1 },
-      { limitKey: 'gift_cards',    value: -1 },
-      { limitKey: 'staff_accounts',value: -1 },
+      { limitKey: 'customers',     limitValue: -1 },
+      { limitKey: 'sms_per_month', limitValue: -1 },
+      { limitKey: 'gift_cards',    limitValue: -1 },
+      { limitKey: 'staff_accounts',limitValue: -1 },
     ],
   },
 ];
@@ -67,12 +59,19 @@ async function main() {
     const { features, limits, ...planData } = plan;
 
     await db.plan.upsert({
-      where: { slug: planData.slug },
-      update: { ...planData },
+      where: { id: planData.id },
+      update: {
+        name: planData.name,
+        isActive: true,
+      },
       create: {
         ...planData,
-        features: { create: features.map(featureKey => ({ featureKey })) },
-        limits:   { create: limits },
+        features: { 
+          create: [
+            ...features.map(featureKey => ({ featureKey, enabled: true })),
+            ...limits.map(limit => ({ limitKey: limit.limitKey, limitValue: limit.limitValue, enabled: true }))
+          ] 
+        },
       },
     });
 
