@@ -1,0 +1,299 @@
+/* ═══════════════════════════════════════════════════════════════
+   SHOP STAFF DESIGN SYSTEM 
+   A sleek, modern dashboard layout using a maroon/indigo theme.
+═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Brand Colors */
+  --shop-primary: #a80028;
+  --shop-primary-hover: #8b0020;
+  --shop-accent: #f07090;
+  
+  /* Layout Colors */
+  --shop-sidebar: #ffffff;
+  --shop-bg: #fdf2f4; /* light maroon tint for app background */
+  
+  /* Text */
+  --shop-text-primary: #1e293b;
+  --shop-text-secondary: #64748b;
+  --shop-text-muted: #94a3b8;
+  
+  /* Borders & Shadows */
+  --shop-border: #ede5e8;
+  --shop-shadow-sm: 0 1px 3px rgba(168, 0, 40, 0.05);
+  --shop-shadow-md: 0 4px 6px -1px rgba(168, 0, 40, 0.08);
+  
+  /* Layout Dimensions */
+  --shop-sidebar-width: 260px;
+  --shop-header-height: 64px;
+}
+
+body .shop-layout-root {
+  background-color: var(--shop-bg);
+  min-height: 100vh;
+  display: flex;
+  font-family: 'Inter', system-ui, sans-serif;
+  color: var(--shop-text-primary);
+}
+
+/* ── Sidebar ────────────────────────────────────────────────── */
+.shop-sidebar {
+  width: var(--shop-sidebar-width);
+  background: var(--shop-sidebar);
+  border-right: 1px solid var(--shop-border);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 40;
+}
+
+.shop-sidebar-header {
+  height: var(--shop-header-height);
+  display: flex;
+  align-items: center;
+  padding: 0 1.5rem;
+  border-bottom: 1px solid var(--shop-border);
+}
+
+.shop-logo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+}
+
+.shop-logo-icon {
+  width: 32px;
+  height: 32px;
+  background: var(--shop-primary);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.shop-logo-text {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--shop-text-primary);
+  letter-spacing: -0.025em;
+}
+
+/* Nav Links */
+.shop-nav {
+  flex: 1;
+  padding: 1.5rem 1rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.shop-nav-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--shop-text-muted);
+  margin: 1rem 0 0.5rem 0.75rem;
+}
+
+.shop-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.5rem;
+  color: var(--shop-text-secondary);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.shop-nav-link svg {
+  color: var(--shop-text-muted);
+  transition: color 0.2s;
+}
+
+.shop-nav-link:hover {
+  background: var(--shop-bg);
+  color: var(--shop-text-primary);
+}
+
+.shop-nav-link:hover svg {
+  color: var(--shop-primary);
+}
+
+.shop-nav-link.active {
+  background: var(--shop-bg);
+  color: var(--shop-primary);
+  font-weight: 600;
+}
+
+.shop-nav-link.active svg {
+  color: var(--shop-primary);
+}
+
+/* Sidebar Footer */
+.shop-sidebar-footer {
+  padding: 1.25rem;
+  border-top: 1px solid var(--shop-border);
+}
+
+.shop-user-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition: background 0.2s;
+}
+
+.shop-user-profile:hover {
+  background: var(--shop-bg);
+}
+
+.shop-user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--shop-accent);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.shop-user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.shop-user-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--shop-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shop-user-role {
+  font-size: 0.75rem;
+  color: var(--shop-text-secondary);
+}
+
+.shop-logout-btn {
+  background: none;
+  border: none;
+  color: var(--shop-text-muted);
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.shop-logout-btn:hover {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
+/* ── Main Content Area ──────────────────────────────────────── */
+.shop-main {
+  flex: 1;
+  margin-left: var(--shop-sidebar-width);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.shop-topbar {
+  height: var(--shop-header-height);
+  background: var(--shop-sidebar);
+  border-bottom: 1px solid var(--shop-border);
+  display: flex;
+  align-items: center;
+  padding: 0 2rem;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.shop-page-wrapper {
+  flex: 1;
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1024px) {
+  .shop-sidebar {
+    transform: translateX(-100%);
+  }
+  .shop-main {
+    margin-left: 0;
+  }
+}
+
+/* ── Shared Utility Components ──────────────────────────────── */
+/* Badges */
+.shop-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+.shop-badge--green  { background: #dcfce7; color: #16a34a; }
+.shop-badge--amber  { background: #fef3c7; color: #d97706; }
+.shop-badge--red    { background: #fee2e2; color: #dc2626; }
+.shop-badge--maroon { background: var(--shop-bg); color: var(--shop-primary); }
+.shop-badge--gray   { background: var(--shop-border); color: var(--shop-text-secondary); }
+
+/* Buttons */
+.shop-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px;
+  font-family: inherit;
+  font-size: 0.83rem;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-decoration: none;
+  white-space: nowrap;
+  line-height: 1;
+}
+.shop-btn--primary {
+  background: var(--shop-primary);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(168,0,40,0.3);
+}
+.shop-btn--primary:hover {
+  background: var(--shop-primary-hover);
+  box-shadow: 0 4px 12px rgba(168,0,40,0.4);
+  transform: translateY(-1px);
+}
+.shop-btn--ghost {
+  background: none;
+  color: var(--shop-text-secondary);
+  border-color: var(--shop-border);
+}
+.shop-btn--ghost:hover { 
+  background: var(--shop-sidebar); 
+  color: var(--shop-text-primary); 
+}

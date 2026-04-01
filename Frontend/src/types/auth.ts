@@ -3,6 +3,11 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface AdminLoginRequest {
+  email: string;
+  password: string;
+}
+
 export interface LoginResponse {
   token: string;
   user: AuthUser;
@@ -13,6 +18,7 @@ export interface AuthUser {
   name: string;
   username: string;
   shopId: string;
+  role: string;
   forcePasswordChange: boolean;
 }
 

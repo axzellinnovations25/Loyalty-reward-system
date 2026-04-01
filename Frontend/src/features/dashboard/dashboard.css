@@ -1,0 +1,197 @@
+.db-container {
+  padding: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.db-header {
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.db-welcome h1 {
+  font-size: 1.875rem;
+  font-weight: 800;
+  color: var(--n-950);
+  margin-bottom: 0.25rem;
+  letter-spacing: -0.025em;
+}
+
+.db-welcome p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.db-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.db-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+/* Stat Cards */
+.db-stat-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.db-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.db-stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.db-stat-icon--maroon { background: var(--a-100); color: var(--a-600); }
+.db-stat-icon--green  { background: #dcfce7; color: #16a34a; }
+.db-stat-icon--blue   { background: #dbeafe; color: #2563eb; }
+.db-stat-icon--amber  { background: #fef3c7; color: #d97706; }
+
+.db-stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.db-stat-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+
+.db-stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--n-950);
+  line-height: 1;
+}
+
+/* Feature Grid */
+.db-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+}
+
+.db-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.db-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.db-card-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--n-950);
+}
+
+.db-card-link {
+  font-size: 0.8125rem;
+  color: var(--a-600);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* Quick Actions Card */
+.db-quick-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.db-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: var(--n-50);
+  border: 1.5px solid transparent;
+  border-radius: 0.75rem;
+  text-decoration: none;
+  font-weight: 600;
+  color: var(--n-950);
+  transition: all 0.2s;
+}
+
+.db-action-btn:hover {
+  background: var(--a-50);
+  border-color: var(--a-100);
+  color: var(--a-700);
+  transform: translateX(4px);
+}
+
+.db-action-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--a-600);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* Tables in dashboard */
+.db-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.db-table th {
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  padding: 0.75rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.db-table td {
+  padding: 1rem 0.5rem;
+  font-size: 0.875rem;
+  color: var(--n-950);
+  border-bottom: 1px solid var(--n-50);
+}
+
+.db-table tr:hover td {
+  background: var(--n-50);
+}
+
+@media (max-width: 1024px) {
+  .db-layout {
+    grid-template-columns: 1fr;
+  }
+}
