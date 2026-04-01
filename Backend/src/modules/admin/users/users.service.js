@@ -24,7 +24,16 @@ async function create(data) {
 }
 
 async function update(id, data) {
-  await getById(id);
+  const user = await getById(id);
+
+  // Requirement: admin can't make a user account active while the shop is disabled.
+  if (data.isActive === true) {
+    const shop = await db.shop.findUnique({ where: { id: user.shopId } });
+    if (!shop || !shop.isActive) {
+      throw Object.assign(new Error('Cannot activate staff account while shop is disabled'), { status: 400 });
+    }
+  }
+
   return repository.update(id, data);
 }
 

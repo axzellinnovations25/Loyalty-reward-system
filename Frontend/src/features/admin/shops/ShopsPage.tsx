@@ -292,9 +292,6 @@ function AddShopModal({ onClose, onCreated }: AddShopModalProps) {
               </>
             ) : (
               <>
-                <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                  <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
                 Create Shop
               </>
             )}
@@ -328,7 +325,6 @@ function ManageShopModal({ shop, onClose, onUserAdded }: ManageShopModalProps) {
     try {
       setLoadingUsers(true);
       const res = await adminUsersApi.list({ shopId: shop.id });
-      // Ensure we unwrap { success, data } based on different formats
       const raw = res as unknown as { data?: User[] | { items: User[] }; items?: User[] };
       let list: User[] = [];
       if (Array.isArray(raw.data)) list = raw.data;
@@ -344,7 +340,6 @@ function ManageShopModal({ shop, onClose, onUserAdded }: ManageShopModalProps) {
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
-  // Click outside to close
   const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === overlayRef.current) onClose();
   };
@@ -372,11 +367,21 @@ function ManageShopModal({ shop, onClose, onUserAdded }: ManageShopModalProps) {
       });
       onUserAdded(`User ${name.trim()} added to ${shop.name}!`);
       setName(''); setUsername(''); setPassword('');
-      fetchUsers(); // refresh the list
+      fetchUsers();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to create user account.');
     } finally {
       setLoadingAdd(false);
+    }
+  };
+
+  const handleToggleUserStatus = async (user: User) => {
+    const newStatus = !user.isActive;
+    try {
+      await adminUsersApi.update(user.id, { isActive: newStatus });
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isActive: newStatus } : u));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to update user status.');
     }
   };
 
@@ -396,119 +401,219 @@ function ManageShopModal({ shop, onClose, onUserAdded }: ManageShopModalProps) {
       <div
         style={{
           background: 'var(--white)', borderRadius: 'var(--r-xl)',
-          boxShadow: 'var(--shadow-lg)', width: '100%', maxWidth: 700,
+          boxShadow: 'var(--shadow-lg)', width: '100%', maxWidth: 750,
           margin: '0 16px', overflow: 'hidden', display: 'flex', flexDirection: 'column',
           maxHeight: '90vh',
           animation: 'adm-slide-up 0.2s ease',
         }}
       >
-        {/* Header */}
+        {/* Modal Header */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '20px 24px 16px', borderBottom: '1px solid var(--border)',
+          padding: '24px 28px 20px', borderBottom: '1px solid var(--border)',
+          background: 'linear-gradient(to right, var(--white), var(--n-50))'
         }}>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: '0.97rem', color: 'var(--text-primary)' }}>Manage Shop: {shop.name}</div>
-            <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: 1 }}>
-              Configure shop properties and staff accounts
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 'var(--r-md)',
+              background: 'var(--a-600)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'var(--white)', boxShadow: '0 4px 12px rgba(168, 0, 40, 0.2)'
+            }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 7a4 4 0 100-8 4 4 0 000 8zm14 14v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--a-600)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>
+                Shop Settings
+              </div>
+              <div style={{ fontWeight: 700, fontSize: '1.2rem', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+                {shop.name}
+              </div>
             </div>
           </div>
           <button
             onClick={onClose}
             style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              padding: 6, borderRadius: 6, color: 'var(--text-secondary)',
+              background: 'var(--n-100)', border: 'none', cursor: 'pointer',
+              padding: 8, borderRadius: '50%', color: 'var(--text-secondary)',
+              display: 'flex', transition: 'all 0.2s',
             }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--danger-bg)'; e.currentTarget.style.color = 'var(--danger)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'var(--n-100)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M2 2l12 12M14 2L2 14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+            <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
+              <path d="M2 2l12 12M14 2L2 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>
           </button>
         </div>
 
-        {/* Body */}
+        {/* Modal Body */}
         <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-          {/* Left panel: Admin user creation form */}
-          <div style={{ flex: 1, padding: '24px', borderRight: '1px solid var(--border)', overflowY: 'auto' }}>
-            <h3 style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>Add Staff Account</h3>
+          {/* Left Panel: Form */}
+          <div style={{ width: 320, padding: '28px 24px', borderRight: '1px solid var(--border)', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+              <div style={{ width: 4, height: 16, background: 'var(--a-600)', borderRadius: 2 }} />
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>Add Staff Account</h3>
+            </div>
             
             <form onSubmit={handleCreateUser}>
               {error && (
                 <div style={{
-                  background: 'var(--danger-bg)', border: '1px solid rgba(220,38,38,0.2)',
-                  borderRadius: 'var(--r-sm)', padding: '10px 14px',
-                  color: 'var(--danger)', fontSize: '0.83rem', fontWeight: 500,
-                  marginBottom: 16, display: 'flex', alignItems: 'flex-start', gap: 8,
+                  background: 'var(--danger-bg)', border: '1px solid rgba(220,38,38,0.1)',
+                  borderRadius: 'var(--r-md)', padding: '12px 14px',
+                  color: 'var(--danger)', fontSize: '0.8rem', fontWeight: 500,
+                  marginBottom: 20, display: 'flex', alignItems: 'flex-start', gap: 8,
+                  animation: 'adm-slide-up 0.2s ease'
                 }}>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ marginTop: 2, flexShrink: 0 }}>
+                    <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.5"/>
+                    <path d="M7 4v3M7 9.5v.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
                   {error}
                 </div>
               )}
 
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: 6 }}>Name</label>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Full Name</label>
                 <input
                   type="text" className="adm-input" placeholder="e.g. John Doe"
                   value={name} onChange={e => setName(e.target.value)} required
+                  style={{ background: 'var(--n-50)' }}
                 />
               </div>
 
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: 6 }}>Login Username</label>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Login Username</label>
                 <input
                   type="text" className="adm-input" placeholder="e.g. john_doe"
                   value={username} onChange={e => setUsername(e.target.value)} required
+                  style={{ background: 'var(--n-50)' }}
                 />
               </div>
 
-              <div style={{ marginBottom: 18 }}>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: 6 }}>Initial Password</label>
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Initial Password</label>
                 <input
-                  type="text" className="adm-input" placeholder="Min 8 characters"
+                  type="password" className="adm-input" placeholder="Min 8 characters"
                   value={password} onChange={e => setPassword(e.target.value)} minLength={8} required
+                  style={{ background: 'var(--n-50)' }}
                 />
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                  </svg>
+                  Staff can change this later
+                </div>
               </div>
 
-              <button type="submit" className="adm-btn adm-btn--primary" style={{ width: '100%' }} disabled={loadingAdd}>
-                {loadingAdd ? 'Adding...' : 'Create Shop Account'}
+              <button type="submit" className="adm-btn adm-btn--primary" style={{ width: '100%', padding: '12px' }} disabled={loadingAdd}>
+                {loadingAdd ? (
+                  <>
+                    <span className="adm-spinner" style={{ width: 14, height: 14 }} />
+                    Creating...
+                  </>
+                ) : 'Create Shop Account'}
               </button>
             </form>
           </div>
 
-          {/* Right panel: Active accounts */}
-          <div style={{ flex: 1, padding: '24px', overflowY: 'auto', background: 'var(--n-50)' }}>
-            <h3 style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>
-              Current Staff ({users.length})
-            </h3>
+          {/* Right Panel: Staff List */}
+          <div style={{ flex: 1, padding: '28px', overflowY: 'auto', background: 'var(--n-50)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h3 style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)' }}>Current Staff</h3>
+                <span style={{ fontSize: '0.72rem', fontWeight: 600, background: 'var(--a-600)', color: 'var(--white)', padding: '2px 10px', borderRadius: 12 }}>
+                  {users.length}
+                </span>
+              </div>
+            </div>
             
             {loadingUsers ? (
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Loading accounts...</div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 0', gap: 14 }}>
+                <span className="adm-spinner adm-spinner--dark" style={{ width: 28, height: 28 }} />
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Fetching accounts...</div>
+              </div>
             ) : users.length === 0 ? (
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', padding: '20px 0', textAlign: 'center' }}>
-                No standard user accounts exist.
+              <div style={{ 
+                padding: '50px 24px', textAlign: 'center', background: 'var(--white)', 
+                border: '1px dashed var(--border)', borderRadius: 'var(--r-xl)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16
+              }}>
+                <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'var(--n-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--n-200)' }}>
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+                    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 7a4 4 0 100-8 4 4 0 000 8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <div>
+                  <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>No Staff Accounts</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: 4 }}>Create accounts on the left to show them here.</div>
+                </div>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {users.map(u => (
-                  <div key={u.id} style={{
-                    background: '#fff', border: '1px solid var(--border)', borderRadius: 'var(--r-md)',
-                    padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12
-                  }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {users.map((u, idx) => (
+                  <div 
+                    key={u.id} 
+                    style={{
+                      background: 'var(--white)', 
+                      border: '1px solid var(--border)', 
+                      borderRadius: 'var(--r-lg)',
+                      padding: '16px', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: 16,
+                      boxShadow: 'var(--shadow-sm)',
+                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                      animation: `adm-slide-up 0.4s ease forwards`,
+                      animationDelay: `${idx * 0.05}s`
+                    }}
+                  >
                     <div style={{
-                      width: 32, height: 32, borderRadius: 16, background: 'var(--a-100)', color: 'var(--a-700)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.8rem',
-                      textTransform: 'uppercase'
+                      width: 44, height: 44, borderRadius: 14, 
+                      background: u.isActive ? 'linear-gradient(135deg, var(--a-500), var(--a-700))' : 'var(--n-100)', 
+                      color: u.isActive ? 'var(--white)' : 'var(--n-400)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                      fontWeight: 700, fontSize: '1rem',
+                      textTransform: 'uppercase',
+                      boxShadow: u.isActive ? '0 4px 12px rgba(168, 0, 40, 0.12)' : 'none',
+                      flexShrink: 0
                     }}>
                       {u.name.substring(0, 2)}
                     </div>
-                    <div style={{ flex: 1, overflow: 'hidden' }}>
-                      <div style={{ fontSize: '0.83rem', fontWeight: 600, color: 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{u.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>@{u.username}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.name}</div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2, fontFamily: 'var(--font-mono, monospace)', background: 'var(--n-50)', padding: '1px 6px', borderRadius: 4, display: 'inline-block' }}>
+                        {u.username}
+                      </div>
                     </div>
-                    {u.isActive ? (
-                      <span className="adm-badge adm-badge--green" style={{ fontSize: '0.65rem' }}>Active</span>
-                    ) : (
-                      <span className="adm-badge adm-badge--gray" style={{ fontSize: '0.65rem' }}>Inactive</span>
-                    )}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                      <span className={`adm-badge ${u.isActive ? 'adm-badge--green' : 'adm-badge--gray'}`} style={{ fontSize: '0.68rem', padding: '3px 10px', boxShadow: 'none' }}>
+                        <span className="adm-badge-dot" />
+                        {u.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                      <button
+                        onClick={() => handleToggleUserStatus(u)}
+                        disabled={!u.isActive && !shop.isActive}
+                        style={{
+                          background: u.isActive ? 'rgba(220, 38, 38, 0.08)' : 'rgba(168, 0, 40, 0.08)', 
+                          border: 'none', 
+                          padding: '5px 12px', 
+                          borderRadius: 8,
+                          cursor: (u.isActive || shop.isActive) ? 'pointer' : 'not-allowed',
+                          fontSize: '0.72rem', 
+                          color: u.isActive ? 'var(--danger)' : 'var(--a-700)',
+                          fontWeight: 700,
+                          transition: 'all 0.2s',
+                          opacity: (!u.isActive && !shop.isActive) ? 0.35 : 1
+                        }}
+                        onMouseEnter={e => { if (u.isActive || shop.isActive) e.currentTarget.style.background = u.isActive ? 'rgba(220, 38, 38, 0.15)' : 'rgba(168, 0, 40, 0.15)'; }}
+                        onMouseLeave={e => { if (u.isActive || shop.isActive) e.currentTarget.style.background = u.isActive ? 'rgba(220, 38, 38, 0.08)' : 'rgba(168, 0, 40, 0.08)'; }}
+                      >
+                        {u.isActive ? 'Deactivate' : 'Activate'}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -590,6 +695,23 @@ export default function ShopsPage() {
     setToast({ msg: `"${shop.name}" created successfully!`, type: 'success' });
   };
 
+  const handleToggleStatus = async (shop: Shop) => {
+    const newStatus = !shop.isActive;
+    try {
+      await adminShopsApi.update(shop.id, { isActive: newStatus });
+      setShops(prev => prev.map(s => s.id === shop.id ? { ...s, isActive: newStatus } : s));
+      setToast({
+        msg: `"${shop.name}" ${newStatus ? 'enabled' : 'disabled'} successfully!`,
+        type: 'success'
+      });
+    } catch (err: unknown) {
+      setToast({
+        msg: err instanceof Error ? err.message : 'Failed to update shop status.',
+        type: 'error'
+      });
+    }
+  };
+
   return (
     <>
       {/* Keyframe animations injected inline */}
@@ -665,9 +787,6 @@ export default function ShopsPage() {
             className="adm-btn adm-btn--primary"
             onClick={() => setShowModal(true)}
           >
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-              <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
             Add Shop
           </button>
         </div>
@@ -769,9 +888,6 @@ export default function ShopsPage() {
                           onClick={() => setShowModal(true)}
                           style={{ marginTop: 16 }}
                         >
-                          <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                            <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                          </svg>
                           Add First Shop
                         </button>
                       )}
@@ -816,6 +932,7 @@ export default function ShopsPage() {
                           <button
                             className={shop.isActive ? 'adm-btn adm-btn--danger' : 'adm-btn adm-btn--ghost'}
                             style={{ padding: '5px 10px', fontSize: '0.78rem' }}
+                            onClick={() => handleToggleStatus(shop)}
                           >
                             {shop.isActive ? 'Disable' : 'Enable'}
                           </button>

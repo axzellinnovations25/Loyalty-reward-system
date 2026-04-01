@@ -24,7 +24,24 @@ async function create(body, adminId) {
 
 async function update(id, data) {
   await getById(id);
-  return repository.update(id, data);
+  
+  return db.$transaction(async (tx) => {
+    const updatedShop = await tx.shop.update({
+      where: { id },
+      data,
+      include: { plan: true },
+    });
+
+    // If the shop is being disabled, disable all its users too
+    if (data.isActive === false) {
+      await tx.user.updateMany({
+        where: { shopId: id },
+        data: { isActive: false },
+      });
+    }
+
+    return updatedShop;
+  });
 }
 
 module.exports = { list, getById, create, update };
