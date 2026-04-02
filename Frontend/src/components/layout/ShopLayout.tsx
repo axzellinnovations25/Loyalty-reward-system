@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import ChangePasswordModal from '../../features/auth/ChangePasswordModal';
 import './shop-layout.css';
 
 interface NavItem {
@@ -126,6 +127,7 @@ interface ShopLayoutProps {
 
 export default function ShopLayout({ children }: ShopLayoutProps) {
   const { user, clearAuth } = useAuth();
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
   // Group items
   const mainItems = NAV_ITEMS.filter((i) => i.group === 'Main');
@@ -196,16 +198,34 @@ export default function ShopLayout({ children }: ShopLayoutProps) {
                 {user?.role === 'owner' ? 'Shop Owner' : 'Staff'}
               </div>
             </div>
-            <button className="shop-logout-btn" onClick={clearAuth} title="Log out">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-              </svg>
-            </button>
+            <div className="shop-user-actions" style={{ display: 'flex', gap: '2px', marginLeft: 'auto' }}>
+              <button 
+                className="shop-logout-btn" 
+                onClick={() => setIsChangePasswordOpen(true)} 
+                title="Change Password"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+              </button>
+              <button className="shop-logout-btn" onClick={clearAuth} title="Log out">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </aside>
+
+      {isChangePasswordOpen && user && (
+        <ChangePasswordModal 
+          onClose={() => setIsChangePasswordOpen(false)} 
+        />
+      )}
 
       {/* Main Content Area */}
       <main className="shop-main">
