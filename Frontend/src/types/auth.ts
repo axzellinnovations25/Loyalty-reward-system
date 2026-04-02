@@ -34,6 +34,6 @@ export interface AdminAuthUser {
 }
 
 export interface ChangePasswordRequest {
-  currentPassword: string;
+  oldPassword: string;
   newPassword: string;
 }

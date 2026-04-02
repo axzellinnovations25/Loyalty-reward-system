@@ -23,15 +23,18 @@ export default function LoginPage() {
       // In this project, the raw data is returned or wrapped. 
       // Based on authApi structure: authApi.login returns Promise<AxiosResponse<LoginResponse>> via our client.
       // But let's assume it returns the LoginResponse directly if we use our common wrapper.
-      const res = await authApi.login({ username, password });
+      const envelope = await authApi.login({ username, password }) as unknown as {
+        data: { token: string; user: any };
+      };
       
-      // Axios interceptors or our client usually handle the nesting. 
-      // Based on previous patterns, we might need res.data or just res.
-      // Checking useService/apiClient patterns usually helps but let's stick to the res = result logic.
-      setAuth(res.user, res.token);
+      const { user, token } = envelope.data;
+      setAuth(user, token);
       
-      // Navigate to dashboard after successful login
-      navigate('/dashboard', { replace: true });
+      if (user.forcePasswordChange) {
+        navigate('/force-change-password', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
     } catch (err: any) {
       console.error('Login error:', err);
       const message = err.response?.data?.error || err.message || 'Login failed. Please try again.';

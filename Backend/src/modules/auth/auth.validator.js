@@ -19,6 +19,11 @@ const refreshSchema = Joi.object({
   refreshToken: Joi.string().required(),
 });
 
+const changePasswordSchema = Joi.object({
+  oldPassword: Joi.string().required(),
+  newPassword: Joi.string().min(6).required(),
+});
+
 function validateBody(schema) {
   return (req, res, next) => {
     const { error } = schema.validate(req.body, { abortEarly: false });
@@ -29,4 +34,4 @@ function validateBody(schema) {
   };
 }
 
-module.exports = { loginSchema, registerSchema, refreshSchema, validateBody };
+module.exports = { loginSchema, registerSchema, refreshSchema, changePasswordSchema, validateBody };

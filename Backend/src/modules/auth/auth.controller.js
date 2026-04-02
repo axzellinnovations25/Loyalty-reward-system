@@ -24,4 +24,11 @@ const me = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { login, register, me };
+const changePassword = async (req, res, next) => {
+  try {
+    const data = await service.changePassword(req.user.userId, req.body);
+    return ok(res, data);
+  } catch (err) { next(err); }
+};
+
+module.exports = { login, register, me, changePassword };

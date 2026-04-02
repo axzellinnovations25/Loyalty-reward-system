@@ -85,4 +85,24 @@ async function me(userId) {
   });
 }
 
-module.exports = { login, register, me };
+async function changePassword(userId, { oldPassword, newPassword }) {
+  const user = await db.user.findUnique({ where: { id: userId } });
+  if (!user) throw Object.assign(new Error('User not found'), { status: 404 });
+
+  const valid = await bcrypt.compare(oldPassword, user.passwordHash);
+  if (!valid) throw Object.assign(new Error('Invalid old password'), { status: 400 });
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  
+  await db.user.update({
+    where: { id: userId },
+    data: { 
+      passwordHash,
+      forcePasswordChange: false 
+    }
+  });
+
+  return { success: true };
+}
+
+module.exports = { login, register, me, changePassword };

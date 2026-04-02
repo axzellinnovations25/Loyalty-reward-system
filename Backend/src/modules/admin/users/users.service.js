@@ -20,7 +20,7 @@ async function create(data) {
 
   const passwordHash = await bcrypt.hash(data.password, 12);
   const { password, ...userData } = data;
-  return repository.create({ ...userData, passwordHash });
+  return repository.create({ ...userData, passwordHash, forcePasswordChange: true });
 }
 
 async function update(id, data) {

@@ -20,6 +20,7 @@ import RewardsPage from '../features/rewards/RewardsPage';
 import SettingsPage from '../features/settings/SettingsPage';
 import UserListPage from '../features/users/UserListPage';
 import MessageLogPage from '../features/messages/MessageLogPage';
+import ForceChangePasswordPage from '../features/auth/ForceChangePasswordPage';
 
 // Admin pages
 import AdminLoginPage from '../features/admin/auth/AdminLoginPage';
@@ -30,8 +31,17 @@ import BillingPage from '../features/admin/billing/BillingPage';
 
 /** Redirect to login if not authenticated. */
 function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+  const { isAuthenticated, user } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user?.forcePasswordChange) return <Navigate to="/force-change-password" replace />;
+  return <>{children}</>;
+}
+
+function RequireForcePasswordAuth({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, user } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!user?.forcePasswordChange) return <Navigate to="/dashboard" replace />;
+  return <>{children}</>;
 }
 
 /** Redirect to admin login if not authenticated. */
@@ -47,6 +57,16 @@ export default function AppRouter() {
         {/* Public */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/admin/login" element={<AdminLoginPage />} />
+
+        {/* Force password change page for staff */}
+        <Route 
+          path="/force-change-password" 
+          element={
+            <RequireForcePasswordAuth>
+              <ForceChangePasswordPage />
+            </RequireForcePasswordAuth>
+          } 
+        />
 
         {/* Shop staff — protected */}
         <Route
