@@ -28,14 +28,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [auth, setAuthState] = useState<AuthState>(() => {
     const token = localStorage.getItem('token');
     const raw = localStorage.getItem('user');
-    const user = raw ? (JSON.parse(raw) as AuthUser) : null;
+    let user = null;
+    try {
+      if (raw) user = JSON.parse(raw) as AuthUser;
+    } catch (e) {
+      console.error('Failed to parse user from localStorage', e);
+      localStorage.removeItem('user');
+    }
     return { user, token };
   });
 
   const [adminAuth, setAdminAuthState] = useState<AdminAuthState>(() => {
     const token = localStorage.getItem('admin_token');
     const raw = localStorage.getItem('admin_user');
-    const admin = raw ? (JSON.parse(raw) as AdminAuthUser) : null;
+    let admin = null;
+    try {
+      if (raw) admin = JSON.parse(raw) as AdminAuthUser;
+    } catch (e) {
+      console.error('Failed to parse admin_user from localStorage', e);
+      localStorage.removeItem('admin_user');
+    }
     return { admin, token };
   });
 

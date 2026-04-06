@@ -19,7 +19,7 @@ async function summary(shopId, { from, to }) {
     db.purchase.count({ where: { shopId, createdAt: dateFilter } }),
     db.redemption.count({ where: { shopId, createdAt: dateFilter } }),
     db.purchase.aggregate({ where: { shopId, createdAt: dateFilter }, _sum: { amount: true } }),
-    db.customerPoints.aggregate({ where: { shopId }, _sum: { points: true } }),
+    db.customer.aggregate({ where: { shopId }, _sum: { totalPoints: true } }),
   ]);
 
   return {
@@ -27,7 +27,7 @@ async function summary(shopId, { from, to }) {
     totalPurchases,
     totalRedemptions,
     totalRevenue: revenueAgg._sum.amount ?? 0,
-    totalPointsOutstanding: pointsAgg._sum.points ?? 0,
+    totalPointsOutstanding: pointsAgg._sum.totalPoints ?? 0,
   };
 }
 

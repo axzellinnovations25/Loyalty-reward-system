@@ -4,17 +4,22 @@ const Joi = require('joi');
 
 const createSchema = Joi.object({
   name: Joi.string().min(2).max(100).required(),
-  email: Joi.string().email().required(),
+  username: Joi.string().min(3).max(50).required(),
   password: Joi.string().min(8).required(),
-  role: Joi.string().valid('admin', 'owner', 'staff').required(),
-  shopId: Joi.string().optional(),
+  shopId: Joi.string().uuid().required(),
+  forcePasswordChange: Joi.boolean().optional(),
 });
 
 const updateSchema = Joi.object({
   name: Joi.string().min(2).max(100),
-  role: Joi.string().valid('admin', 'owner', 'staff'),
+  username: Joi.string().min(3).max(50),
   isActive: Joi.boolean(),
+  forcePasswordChange: Joi.boolean(),
 }).min(1);
+
+const resetPasswordSchema = Joi.object({
+  password: Joi.string().min(8).required(),
+});
 
 function validateBody(schema) {
   return (req, res, next) => {
@@ -24,4 +29,4 @@ function validateBody(schema) {
   };
 }
 
-module.exports = { createSchema, updateSchema, validateBody };
+module.exports = { createSchema, updateSchema, resetPasswordSchema, validateBody };

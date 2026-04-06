@@ -2,10 +2,21 @@
 
 const Joi = require('joi');
 
+const PLAN_IDS = ['basic', 'standard', 'pro', 'enterprise'];
+
+const createSchema = Joi.object({
+  name:        Joi.string().min(2).max(100).required(),
+  email:       Joi.string().email().required(),
+  contactInfo: Joi.string().max(200).allow('').optional(),
+  planId:      Joi.string().valid(...PLAN_IDS).required(),
+});
+
 const updateSchema = Joi.object({
-  name: Joi.string().min(2).max(100),
-  isActive: Joi.boolean(),
-  notes: Joi.string().max(500).allow(''),
+  name:        Joi.string().min(2).max(100),
+  email:       Joi.string().email(),
+  contactInfo: Joi.string().max(200).allow(''),
+  isActive:    Joi.boolean(),
+  notes:       Joi.string().max(500).allow(''),
 }).min(1);
 
 function validateBody(schema) {
@@ -16,4 +27,4 @@ function validateBody(schema) {
   };
 }
 
-module.exports = { updateSchema, validateBody };
+module.exports = { createSchema, updateSchema, validateBody };

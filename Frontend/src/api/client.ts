@@ -20,8 +20,15 @@ async function request<T>(
   });
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error(body.message || 'Request failed');
+    const body = await res.json().catch(() => ({ error: res.statusText }));
+
+    // Auto-clear stale admin token on 401 so the auth guard can redirect to login
+    if (res.status === 401 && tokenKey === 'admin_token') {
+      localStorage.removeItem('admin_token');
+      localStorage.removeItem('admin_user');
+    }
+
+    throw new Error(body.error || body.message || 'Request failed');
   }
 
   // 204 No Content

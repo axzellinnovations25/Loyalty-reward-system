@@ -13,16 +13,34 @@ async function getById(id) {
 }
 
 async function create(data) {
-  const existing = await db.user.findUnique({ where: { email: data.email } });
-  if (existing) throw Object.assign(new Error('Email already in use'), { status: 409 });
+  const existing = await db.user.findUnique({ 
+    where: { username: data.username } 
+  });
+  if (existing) throw Object.assign(new Error('Username is already taken'), { status: 409 });
 
   const passwordHash = await bcrypt.hash(data.password, 12);
-  return repository.create({ ...data, password: undefined, passwordHash });
+  const { password, ...userData } = data;
+  return repository.create({ ...userData, passwordHash, forcePasswordChange: true });
 }
 
 async function update(id, data) {
-  await getById(id);
+  const user = await getById(id);
+
+  // Requirement: admin can't make a user account active while the shop is disabled.
+  if (data.isActive === true) {
+    const shop = await db.shop.findUnique({ where: { id: user.shopId } });
+    if (!shop || !shop.isActive) {
+      throw Object.assign(new Error('Cannot activate staff account while shop is disabled'), { status: 400 });
+    }
+  }
+
   return repository.update(id, data);
 }
 
-module.exports = { list, getById, create, update };
+async function resetPassword(id, newPassword) {
+  await getById(id);
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  return repository.update(id, { passwordHash, forcePasswordChange: true });
+}
+
+module.exports = { list, getById, create, update, resetPassword };

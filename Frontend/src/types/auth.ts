@@ -1,4 +1,9 @@
 export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
+export interface AdminLoginRequest {
   email: string;
   password: string;
 }
@@ -11,8 +16,9 @@ export interface LoginResponse {
 export interface AuthUser {
   id: string;
   name: string;
-  email: string;
+  username: string;
   shopId: string;
+  role: string;
   forcePasswordChange: boolean;
 }
 
@@ -28,6 +34,6 @@ export interface AdminAuthUser {
 }
 
 export interface ChangePasswordRequest {
-  currentPassword: string;
+  oldPassword: string;
   newPassword: string;
 }
