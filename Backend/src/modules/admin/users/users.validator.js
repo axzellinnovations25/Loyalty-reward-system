@@ -17,6 +17,10 @@ const updateSchema = Joi.object({
   forcePasswordChange: Joi.boolean(),
 }).min(1);
 
+const resetPasswordSchema = Joi.object({
+  password: Joi.string().min(8).required(),
+});
+
 function validateBody(schema) {
   return (req, res, next) => {
     const { error } = schema.validate(req.body, { abortEarly: false });
@@ -25,4 +29,4 @@ function validateBody(schema) {
   };
 }
 
-module.exports = { createSchema, updateSchema, validateBody };
+module.exports = { createSchema, updateSchema, resetPasswordSchema, validateBody };

@@ -8,4 +8,6 @@ export const adminUsersApi = {
   create: (data: CreateUserRequest & { shopId: string }) => adminApi.post<User>('/admin/users', data),
   update: (id: string, data: Partial<CreateUserRequest> & { isActive?: boolean }) =>
     adminApi.patch<User>(`/admin/users/${id}`, data),
+  resetPassword: (id: string, password: string) =>
+    adminApi.patch<{ success: boolean; data: User }>(`/admin/users/${id}/reset-password`, { password }),
 };

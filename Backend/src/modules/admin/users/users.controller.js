@@ -7,5 +7,6 @@ const list    = async (req, res, next) => { try { const { items, meta } = await 
 const getById = async (req, res, next) => { try { return ok(res, await service.getById(req.params.id)); } catch (e) { next(e); } };
 const create  = async (req, res, next) => { try { return created(res, await service.create(req.body)); } catch (e) { next(e); } };
 const update  = async (req, res, next) => { try { return ok(res, await service.update(req.params.id, req.body)); } catch (e) { next(e); } };
+const resetPassword = async (req, res, next) => { try { return ok(res, await service.resetPassword(req.params.id, req.body.password)); } catch (e) { next(e); } };
 
-module.exports = { list, getById, create, update };
+module.exports = { list, getById, create, update, resetPassword };

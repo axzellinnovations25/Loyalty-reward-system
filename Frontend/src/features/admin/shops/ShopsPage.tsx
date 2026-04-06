@@ -302,15 +302,118 @@ function AddShopModal({ onClose, onCreated }: AddShopModalProps) {
   );
 }
 
+// ── Reset Password Modal ────────────────────────────────────────────────────────
+interface ResetPasswordModalProps {
+  user: User;
+  onClose: () => void;
+  onReset: (msg: string) => void;
+}
+
+function ResetPasswordModal({ user, onClose, onReset }: ResetPasswordModalProps) {
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (e.target === overlayRef.current) onClose();
+  };
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      await adminUsersApi.resetPassword(user.id, password);
+      onReset(`Password reset for ${user.username}. They will be forced to change it on next login.`);
+      onClose();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to reset password.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div
+      ref={overlayRef}
+      onClick={handleOverlayClick}
+      style={{
+        position: 'fixed', inset: 0,
+        background: 'rgba(15,10,12,0.4)',
+        backdropFilter: 'blur(2px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 1100,
+        animation: 'adm-fade-in 0.1s ease',
+      }}
+    >
+      <div
+        style={{
+          background: 'var(--white)', borderRadius: 'var(--r-lg)',
+          boxShadow: 'var(--shadow-lg)', width: '100%', maxWidth: 400,
+          margin: '0 16px', overflow: 'hidden',
+          animation: 'adm-slide-up 0.15s ease',
+        }}
+      >
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>Reset Password</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 2 }}>
+            Set a temporary password for <strong>{user.username}</strong>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ padding: '20px 24px' }}>
+          {error && (
+            <div style={{
+              background: 'var(--danger-bg)', border: '1px solid rgba(220,38,38,0.1)',
+              borderRadius: 'var(--r-sm)', padding: '10px 12px',
+              color: 'var(--danger)', fontSize: '0.78rem', marginBottom: 16
+            }}>
+              {error}
+            </div>
+          )}
+
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Temporary Password</label>
+            <input
+              type="password" className="adm-input" placeholder="Min 8 characters"
+              value={password} onChange={e => setPassword(e.target.value)} minLength={8} required autoFocus
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+            <button type="button" className="adm-btn adm-btn--ghost" onClick={onClose} disabled={loading}>Cancel</button>
+            <button type="submit" className="adm-btn adm-btn--primary" disabled={loading}>
+              {loading ? 'Resetting...' : 'Reset Password'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ── Manage Shop Modal ────────────────────────────────────────────────────────
 
 interface ManageShopModalProps {
   shop: Shop;
   onClose: () => void;
   onUserAdded: (msg: string) => void;
+  onToggleShopStatus: (shop: Shop) => Promise<void>;
 }
 
-function ManageShopModal({ shop, onClose, onUserAdded }: ManageShopModalProps) {
+function ManageShopModal({ shop, onClose, onUserAdded, onToggleShopStatus }: ManageShopModalProps) {
+  const [activeTab, setActiveTab] = useState<'overview' | 'staff'>('overview');
   const [users, setUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
 
@@ -318,7 +421,9 @@ function ManageShopModal({ shop, onClose, onUserAdded }: ManageShopModalProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loadingAdd, setLoadingAdd] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resettingUser, setResettingUser] = useState<User | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
   const fetchUsers = useCallback(async () => {
@@ -338,7 +443,9 @@ function ManageShopModal({ shop, onClose, onUserAdded }: ManageShopModalProps) {
     }
   }, [shop.id]);
 
-  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+  useEffect(() => {
+    if (activeTab === 'staff') fetchUsers();
+  }, [activeTab, fetchUsers]);
 
   const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === overlayRef.current) onClose();
@@ -367,6 +474,7 @@ function ManageShopModal({ shop, onClose, onUserAdded }: ManageShopModalProps) {
       });
       onUserAdded(`User ${name.trim()} added to ${shop.name}!`);
       setName(''); setUsername(''); setPassword('');
+      setShowAddForm(false);
       fetchUsers();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to create user account.');
@@ -401,225 +509,321 @@ function ManageShopModal({ shop, onClose, onUserAdded }: ManageShopModalProps) {
       <div
         style={{
           background: 'var(--white)', borderRadius: 'var(--r-xl)',
-          boxShadow: 'var(--shadow-lg)', width: '100%', maxWidth: 750,
+          boxShadow: 'var(--shadow-lg)', width: '100%', maxWidth: 800,
           margin: '0 16px', overflow: 'hidden', display: 'flex', flexDirection: 'column',
           maxHeight: '90vh',
           animation: 'adm-slide-up 0.2s ease',
         }}
       >
-        {/* Modal Header */}
+        {/* Header Section */}
         <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '24px 28px 20px', borderBottom: '1px solid var(--border)',
+          padding: '28px 28px 0', 
           background: 'linear-gradient(to right, var(--white), var(--n-50))'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{
-              width: 44, height: 44, borderRadius: 'var(--r-md)',
-              background: 'var(--a-600)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--white)', boxShadow: '0 4px 12px rgba(168, 0, 40, 0.2)'
-            }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 7a4 4 0 100-8 4 4 0 000 8zm14 14v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: 'var(--r-md)',
+                background: 'var(--a-600)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--white)', boxShadow: '0 8px 20px rgba(168, 0, 40, 0.2)'
+              }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M3 9.5L12 3l9 6.5V21a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--a-600)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>
+                  Shop Dashboard
+                </div>
+                <div style={{ fontWeight: 800, fontSize: '1.4rem', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+                  {shop.name}
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="adm-btn adm-btn--ghost"
+              style={{ borderRadius: '50%', width: 36, height: 36, padding: 0, minWidth: 36, border: 'none' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--danger-bg)'; e.currentTarget.style.color = 'var(--danger)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+            >
+              <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
+                <path d="M2 2l12 12M14 2L2 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
               </svg>
-            </div>
-            <div>
-              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--a-600)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>
-                Shop Settings
-              </div>
-              <div style={{ fontWeight: 700, fontSize: '1.2rem', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
-                {shop.name}
-              </div>
-            </div>
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'var(--n-100)', border: 'none', cursor: 'pointer',
-              padding: 8, borderRadius: '50%', color: 'var(--text-secondary)',
-              display: 'flex', transition: 'all 0.2s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--danger-bg)'; e.currentTarget.style.color = 'var(--danger)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'var(--n-100)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
-          >
-            <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
-              <path d="M2 2l12 12M14 2L2 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </button>
+
+          {/* Tabs Navigation */}
+          <div className="adm-modal-tabs">
+            <button
+              className={`adm-modal-tab ${activeTab === 'overview' ? 'active' : ''}`}
+              onClick={() => setActiveTab('overview')}
+            >
+              <svg className="adm-modal-tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+              Overview
+            </button>
+            <button
+              className={`adm-modal-tab ${activeTab === 'staff' ? 'active' : ''}`}
+              onClick={() => setActiveTab('staff')}
+            >
+              <svg className="adm-modal-tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 7a4 4 0 100-8 4 4 0 000 8z" />
+              </svg>
+              Staff Accounts
+            </button>
+          </div>
         </div>
 
-        {/* Modal Body */}
-        <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-          {/* Left Panel: Form */}
-          <div style={{ width: 320, padding: '28px 24px', borderRight: '1px solid var(--border)', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-              <div style={{ width: 4, height: 16, background: 'var(--a-600)', borderRadius: 2 }} />
-              <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>Add Staff Account</h3>
-            </div>
-            
-            <form onSubmit={handleCreateUser}>
-              {error && (
-                <div style={{
-                  background: 'var(--danger-bg)', border: '1px solid rgba(220,38,38,0.1)',
-                  borderRadius: 'var(--r-md)', padding: '12px 14px',
-                  color: 'var(--danger)', fontSize: '0.8rem', fontWeight: 500,
-                  marginBottom: 20, display: 'flex', alignItems: 'flex-start', gap: 8,
-                  animation: 'adm-slide-up 0.2s ease'
+        {/* Modal Content Viewport */}
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+          
+          {/* TAB: OVERVIEW */}
+          {activeTab === 'overview' && (
+            <div style={{ padding: '32px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+                {/* Shop Information Card */}
+                <div style={{ 
+                  background: 'var(--white)', border: '1px solid var(--border)', 
+                  borderRadius: 'var(--r-lg)', padding: '24px', boxShadow: 'var(--shadow-sm)'
                 }}>
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ marginTop: 2, flexShrink: 0 }}>
-                    <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.5"/>
-                    <path d="M7 4v3M7 9.5v.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                  {error}
+                  <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 4, height: 14, background: 'var(--a-600)', borderRadius: 2 }} />
+                    Business Details
+                  </h4>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <div>
+                      <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: 4, display: 'block' }}>Email Address</label>
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{shop.email}</div>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: 4, display: 'block' }}>Contact Info</label>
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{shop.contactInfo || 'Not provided'}</div>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: 4, display: 'block' }}>Registration Date</label>
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{formatDate(shop.createdAt)}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Plan & Status Card */}
+                <div style={{ 
+                  background: 'var(--white)', border: '1px solid var(--border)', 
+                  borderRadius: 'var(--r-lg)', padding: '24px', boxShadow: 'var(--shadow-sm)'
+                }}>
+                  <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 4, height: 14, background: 'var(--a-600)', borderRadius: 2 }} />
+                    Subscription Information
+                  </h4>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Current Plan</span>
+                      <span className={`adm-badge ${PLAN_BADGE[shop.planId] || 'adm-badge--gray'}`} style={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        {shop.planId}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Shop Status</span>
+                      <span className={`adm-badge ${shop.isActive ? 'adm-badge--green' : 'adm-badge--gray'}`}>
+                        <span className="adm-badge-dot" />
+                        {shop.isActive ? 'Active' : 'Deactivated'}
+                      </span>
+                    </div>
+
+                    <div style={{ marginTop: 10, padding: '16px', background: 'var(--n-50)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
+                       <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 12 }}>
+                         Manage shop availability. If deactivated, all staff accounts will lose access.
+                       </div>
+                       <button
+                         onClick={() => onToggleShopStatus(shop)}
+                         className={`adm-btn ${shop.isActive ? 'adm-btn--danger' : 'adm-btn--primary'}`}
+                         style={{ width: '100%' }}
+                       >
+                         {shop.isActive ? 'Deactivate Shop' : 'Activate Shop'}
+                       </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: STAFF ACCOUNTS */}
+          {activeTab === 'staff' && (
+            <div style={{ padding: '32px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <div>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Staff Management</h3>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 4 }}>Control access for shop personnel.</p>
+                </div>
+                {!showAddForm && (
+                  <button
+                    onClick={() => setShowAddForm(true)}
+                    className="adm-btn adm-btn--primary"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    New Staff Account
+                  </button>
+                )}
+              </div>
+
+              {showAddForm && (
+                <div style={{ 
+                  background: 'var(--white)', border: '1px solid var(--a-300)', 
+                  borderRadius: 'var(--r-lg)', padding: '24px', marginBottom: 32,
+                  boxShadow: '0 8px 16px rgba(168,0,40,0.05)',
+                  animation: 'adm-slide-up 0.3s ease'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+                    <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>Add New Staff Member</h4>
+                    <button onClick={() => setShowAddForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                         <path d="M18 6L6 18M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  
+                  <form onSubmit={handleCreateUser} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Full Name</label>
+                      <input
+                        type="text" className="adm-input" placeholder="e.g. John Doe"
+                        value={name} onChange={e => setName(e.target.value)} required
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Username</label>
+                      <input
+                        type="text" className="adm-input" placeholder="e.g. john_doe"
+                        value={username} onChange={e => setUsername(e.target.value)} required
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Initial Password</label>
+                      <input
+                        type="password" className="adm-input" placeholder="Min 8 characters"
+                        value={password} onChange={e => setPassword(e.target.value)} minLength={8} required
+                      />
+                    </div>
+                    <div style={{ gridColumn: 'span 3', display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
+                       {error && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginRight: 'auto', alignSelf: 'center' }}>{error}</span>}
+                       <button type="button" className="adm-btn adm-btn--ghost" onClick={() => setShowAddForm(false)}>Cancel</button>
+                       <button type="submit" className="adm-btn adm-btn--primary" disabled={loadingAdd}>
+                         {loadingAdd ? 'Adding...' : 'Create Account'}
+                       </button>
+                    </div>
+                  </form>
                 </div>
               )}
 
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Full Name</label>
-                <input
-                  type="text" className="adm-input" placeholder="e.g. John Doe"
-                  value={name} onChange={e => setName(e.target.value)} required
-                  style={{ background: 'var(--n-50)' }}
-                />
-              </div>
-
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Login Username</label>
-                <input
-                  type="text" className="adm-input" placeholder="e.g. john_doe"
-                  value={username} onChange={e => setUsername(e.target.value)} required
-                  style={{ background: 'var(--n-50)' }}
-                />
-              </div>
-
-              <div style={{ marginBottom: 24 }}>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Initial Password</label>
-                <input
-                  type="password" className="adm-input" placeholder="Min 8 characters"
-                  value={password} onChange={e => setPassword(e.target.value)} minLength={8} required
-                  style={{ background: 'var(--n-50)' }}
-                />
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
-                  </svg>
-                  Staff can change this later
+              {loadingUsers ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 0', gap: 14 }}>
+                  <span className="adm-spinner adm-spinner--dark" style={{ width: 32, height: 32 }} />
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Fetching accounts...</div>
                 </div>
-              </div>
-
-              <button type="submit" className="adm-btn adm-btn--primary" style={{ width: '100%', padding: '12px' }} disabled={loadingAdd}>
-                {loadingAdd ? (
-                  <>
-                    <span className="adm-spinner" style={{ width: 14, height: 14 }} />
-                    Creating...
-                  </>
-                ) : 'Create Shop Account'}
-              </button>
-            </form>
-          </div>
-
-          {/* Right Panel: Staff List */}
-          <div style={{ flex: 1, padding: '28px', overflowY: 'auto', background: 'var(--n-50)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <h3 style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)' }}>Current Staff</h3>
-                <span style={{ fontSize: '0.72rem', fontWeight: 600, background: 'var(--a-600)', color: 'var(--white)', padding: '2px 10px', borderRadius: 12 }}>
-                  {users.length}
-                </span>
-              </div>
+              ) : users.length === 0 ? (
+                <div className="adm-empty" style={{ background: 'var(--white)', border: '1px dashed var(--border)', borderRadius: 'var(--r-xl)' }}>
+                  <div className="adm-empty-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 7a4 4 0 100-8 4 4 0 000 8z"/></svg></div>
+                  <div className="adm-empty-title">No Staff Accounts</div>
+                  <div className="adm-empty-desc">Get started by creating the first account for this shop.</div>
+                </div>
+              ) : (
+                <div style={{ 
+                  background: 'var(--white)', border: '1px solid var(--border)', 
+                  borderRadius: 'var(--r-lg)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)'
+                }}>
+                  <table className="adm-table" style={{ border: 'none' }}>
+                    <thead>
+                      <tr>
+                        <th>Member</th>
+                        <th>Credentials</th>
+                        <th>Status</th>
+                        <th style={{ textAlign: 'right' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map(u => (
+                        <tr key={u.id}>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                              <div style={{
+                                width: 34, height: 34, borderRadius: 10,
+                                background: u.isActive ? 'var(--a-100)' : 'var(--n-100)',
+                                color: u.isActive ? 'var(--a-600)' : 'var(--n-400)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '0.8rem', fontWeight: 700
+                              }}>
+                                {u.name.substring(0, 2).toUpperCase()}
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  {u.name}
+                                  {u.forcePasswordChange && (
+                                    <span title="Password reset required" style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--warning)' }} />
+                                  )}
+                                </div>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Staff Member</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <code style={{ fontSize: '0.75rem', color: 'var(--a-700)', background: 'var(--a-50)', padding: '2px 6px', borderRadius: 4 }}>
+                              @{u.username}
+                            </code>
+                          </td>
+                          <td>
+                            <span className={`adm-badge ${u.isActive ? 'adm-badge--green' : 'adm-badge--gray'}`} style={{ fontSize: '0.65rem' }}>
+                              {u.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                              <button 
+                                onClick={() => setResettingUser(u)}
+                                className="adm-btn adm-btn--ghost" 
+                                style={{ padding: '6px 12px', fontSize: '0.72rem' }}
+                              >
+                                Reset Pwd
+                              </button>
+                              <button 
+                                onClick={() => handleToggleUserStatus(u)}
+                                className={`adm-btn ${u.isActive ? 'adm-btn--danger' : 'adm-btn--ghost'}`}
+                                style={{ padding: '6px 12px', fontSize: '0.72rem', color: u.isActive ? 'var(--danger)' : 'var(--success)' }}
+                              >
+                                {u.isActive ? 'Disable' : 'Enable'}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
-            
-            {loadingUsers ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 0', gap: 14 }}>
-                <span className="adm-spinner adm-spinner--dark" style={{ width: 28, height: 28 }} />
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Fetching accounts...</div>
-              </div>
-            ) : users.length === 0 ? (
-              <div style={{ 
-                padding: '50px 24px', textAlign: 'center', background: 'var(--white)', 
-                border: '1px dashed var(--border)', borderRadius: 'var(--r-xl)',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16
-              }}>
-                <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'var(--n-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--n-200)' }}>
-                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-                    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 7a4 4 0 100-8 4 4 0 000 8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-                <div>
-                  <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>No Staff Accounts</div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: 4 }}>Create accounts on the left to show them here.</div>
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {users.map((u, idx) => (
-                  <div 
-                    key={u.id} 
-                    style={{
-                      background: 'var(--white)', 
-                      border: '1px solid var(--border)', 
-                      borderRadius: 'var(--r-lg)',
-                      padding: '16px', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 16,
-                      boxShadow: 'var(--shadow-sm)',
-                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                      animation: `adm-slide-up 0.4s ease forwards`,
-                      animationDelay: `${idx * 0.05}s`
-                    }}
-                  >
-                    <div style={{
-                      width: 44, height: 44, borderRadius: 14, 
-                      background: u.isActive ? 'linear-gradient(135deg, var(--a-500), var(--a-700))' : 'var(--n-100)', 
-                      color: u.isActive ? 'var(--white)' : 'var(--n-400)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                      fontWeight: 700, fontSize: '1rem',
-                      textTransform: 'uppercase',
-                      boxShadow: u.isActive ? '0 4px 12px rgba(168, 0, 40, 0.12)' : 'none',
-                      flexShrink: 0
-                    }}>
-                      {u.name.substring(0, 2)}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.name}</div>
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2, fontFamily: 'var(--font-mono, monospace)', background: 'var(--n-50)', padding: '1px 6px', borderRadius: 4, display: 'inline-block' }}>
-                        {u.username}
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-                      <span className={`adm-badge ${u.isActive ? 'adm-badge--green' : 'adm-badge--gray'}`} style={{ fontSize: '0.68rem', padding: '3px 10px', boxShadow: 'none' }}>
-                        <span className="adm-badge-dot" />
-                        {u.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                      <button
-                        onClick={() => handleToggleUserStatus(u)}
-                        disabled={!u.isActive && !shop.isActive}
-                        style={{
-                          background: u.isActive ? 'rgba(220, 38, 38, 0.08)' : 'rgba(168, 0, 40, 0.08)', 
-                          border: 'none', 
-                          padding: '5px 12px', 
-                          borderRadius: 8,
-                          cursor: (u.isActive || shop.isActive) ? 'pointer' : 'not-allowed',
-                          fontSize: '0.72rem', 
-                          color: u.isActive ? 'var(--danger)' : 'var(--a-700)',
-                          fontWeight: 700,
-                          transition: 'all 0.2s',
-                          opacity: (!u.isActive && !shop.isActive) ? 0.35 : 1
-                        }}
-                        onMouseEnter={e => { if (u.isActive || shop.isActive) e.currentTarget.style.background = u.isActive ? 'rgba(220, 38, 38, 0.15)' : 'rgba(168, 0, 40, 0.15)'; }}
-                        onMouseLeave={e => { if (u.isActive || shop.isActive) e.currentTarget.style.background = u.isActive ? 'rgba(220, 38, 38, 0.08)' : 'rgba(168, 0, 40, 0.08)'; }}
-                      >
-                        {u.isActive ? 'Deactivate' : 'Activate'}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          )}
+
         </div>
+
+        {/* Nested Reset Modal */}
+        {resettingUser && (
+          <ResetPasswordModal
+            user={resettingUser}
+            onClose={() => setResettingUser(null)}
+            onReset={(msg) => {
+              onUserAdded(msg);
+              fetchUsers();
+            }}
+          />
+        )}
       </div>
     </div>
   );
@@ -762,7 +966,8 @@ export default function ShopsPage() {
         <ManageShopModal
           shop={managingShop}
           onClose={() => setManagingShop(null)}
-          onUserAdded={(msg) => setToast({ msg, type: 'success' })}
+          onUserAdded={(msg: string) => setToast({ msg, type: 'success' })}
+          onToggleShopStatus={handleToggleStatus}
         />
       )}
 

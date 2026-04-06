@@ -37,4 +37,10 @@ async function update(id, data) {
   return repository.update(id, data);
 }
 
-module.exports = { list, getById, create, update };
+async function resetPassword(id, newPassword) {
+  await getById(id);
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  return repository.update(id, { passwordHash, forcePasswordChange: true });
+}
+
+module.exports = { list, getById, create, update, resetPassword };
