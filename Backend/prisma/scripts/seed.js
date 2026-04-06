@@ -11,43 +11,46 @@ const plans = [
     name: 'Basic',
     features: [],
     limits: [
-      { limitKey: 'customers',     limitValue: 100 },
-      { limitKey: 'sms_per_month', limitValue: 0 },
-      { limitKey: 'gift_cards',    limitValue: 0 },
-      { limitKey: 'staff_accounts',limitValue: 1 },
+      { limitKey: 'max_customers',     limitValue: 500 },
+      { limitKey: 'max_users',         limitValue: 1 },
+      { limitKey: 'max_gift_cards_pm', limitValue: 0 },
+      { limitKey: 'max_sms_pm',        limitValue: 0 },
     ],
   },
   {
     id: 'standard',
     name: 'Standard',
-    features: ['sms_campaigns', 'points_expiry'],
+    features: ['gift_cards', 'rewards_milestones', 'audit_log'],
     limits: [
-      { limitKey: 'customers',     limitValue: 500 },
-      { limitKey: 'sms_per_month', limitValue: 500 },
-      { limitKey: 'gift_cards',    limitValue: 50 },
-      { limitKey: 'staff_accounts',limitValue: 3 },
+      { limitKey: 'max_customers',     limitValue: 2000 },
+      { limitKey: 'max_users',         limitValue: 2 },
+      { limitKey: 'max_gift_cards_pm', limitValue: 50 },
+      { limitKey: 'max_sms_pm',        limitValue: 0 },
     ],
   },
   {
     id: 'pro',
     name: 'Pro',
-    features: ['sms_campaigns', 'points_expiry', 'gift_cards', 'advanced_reports', 'custom_rewards'],
+    features: ['gift_cards', 'rewards_milestones', 'audit_log', 'sms_messaging', 'promotions_broadcasts', 'reports_exports'],
     limits: [
-      { limitKey: 'customers',     limitValue: 2000 },
-      { limitKey: 'sms_per_month', limitValue: 2000 },
-      { limitKey: 'gift_cards',    limitValue: 500 },
-      { limitKey: 'staff_accounts',limitValue: 10 },
+      { limitKey: 'max_customers',     limitValue: 10000 },
+      { limitKey: 'max_users',         limitValue: 5 },
+      { limitKey: 'max_gift_cards_pm', limitValue: 200 },
+      { limitKey: 'max_sms_pm',        limitValue: 1000 },
     ],
   },
   {
     id: 'enterprise',
     name: 'Enterprise',
-    features: ['sms_campaigns', 'points_expiry', 'gift_cards', 'advanced_reports', 'custom_rewards', 'multi_tier', 'api_access', 'white_label'],
+    features: [
+      'gift_cards', 'rewards_milestones', 'audit_log', 'sms_messaging', 
+      'promotions_broadcasts', 'reports_exports', 'whatsapp_messaging', 'multiple_users'
+    ],
     limits: [
-      { limitKey: 'customers',     limitValue: -1 },
-      { limitKey: 'sms_per_month', limitValue: -1 },
-      { limitKey: 'gift_cards',    limitValue: -1 },
-      { limitKey: 'staff_accounts',limitValue: -1 },
+      { limitKey: 'max_customers',     limitValue: -1 },
+      { limitKey: 'max_users',         limitValue: -1 },
+      { limitKey: 'max_gift_cards_pm', limitValue: -1 },
+      { limitKey: 'max_sms_pm',        limitValue: -1 },
     ],
   },
 ];
@@ -58,6 +61,9 @@ async function main() {
   for (const plan of plans) {
     const { features, limits, ...planData } = plan;
 
+    // Delete existing features/limits for this plan to avoid dupes or stale data
+    await db.planFeature.deleteMany({ where: { planId: planData.id } });
+
     await db.plan.upsert({
       where: { id: planData.id },
       update: {
@@ -65,14 +71,18 @@ async function main() {
         isActive: true,
       },
       create: {
-        ...planData,
-        features: { 
-          create: [
-            ...features.map(featureKey => ({ featureKey, enabled: true })),
-            ...limits.map(limit => ({ limitKey: limit.limitKey, limitValue: limit.limitValue, enabled: true }))
-          ] 
-        },
+        id: planData.id,
+        name: planData.name,
+        isActive: true,
       },
+    });
+
+    // Create new features/limits
+    await db.planFeature.createMany({
+      data: [
+        ...features.map(f => ({ planId: plan.id, featureKey: f, enabled: true })),
+        ...limits.map(l => ({ planId: plan.id, limitKey: l.limitKey, limitValue: l.limitValue, enabled: true }))
+      ]
     });
 
     console.log(`  ✓ ${planData.name}`);

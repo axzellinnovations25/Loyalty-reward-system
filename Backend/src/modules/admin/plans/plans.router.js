@@ -1,11 +1,10 @@
 'use strict';
 
 const router = require('express').Router();
-const authenticate = require('../../../middleware/authenticate');
-const requireAdmin = require('../../../middleware/requireAdmin');
+const authenticateAdmin = require('../../../middleware/authenticateAdmin');
 const controller = require('./plans.controller');
 
-router.use(authenticate, requireAdmin);
+router.use(authenticateAdmin);
 
 router.get('/',    controller.list);
 router.get('/:id', controller.getById);
