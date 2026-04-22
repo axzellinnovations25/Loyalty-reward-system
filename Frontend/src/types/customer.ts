@@ -1,3 +1,6 @@
+import type { Purchase } from './purchase';
+import type { Redemption } from './redemption';
+
 export interface Customer {
   id: string;
   shopId: string;
@@ -7,6 +10,8 @@ export interface Customer {
   lastActivityAt: string | null;
   deletedAt: string | null;
   createdAt: string;
+  purchases?: Purchase[];
+  redemptions?: Redemption[];
 }
 
 export interface CreateCustomerRequest {

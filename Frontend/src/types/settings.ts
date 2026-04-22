@@ -3,9 +3,9 @@ export type RedemptionMode = 'partial' | 'full_only';
 
 export interface ShopSettings {
   shopId: string;
-  // Spend this many LKR to earn 1 point
+  // Rs. pointsPerAmount to earn 1 point
   pointsPerAmount: string;
-  // This many points = 1 LKR discount
+  // 1 LKR discount per redemptionValue points
   redemptionValue: string;
   minRedeemPoints: number;
   maxRedeemMode: MaxRedeemMode;
@@ -15,8 +15,8 @@ export interface ShopSettings {
   expiryWarningDays: number;
   smsEnabled: boolean;
   textlkSenderId: string | null;
-  textlkApiKey: string | null; // masked on read
   textlkApiUrl: string | null;
+  hasApiKey: boolean; // true if API key is stored (key hidden from response)
 }
 
 export interface UpdateShopSettingsRequest {

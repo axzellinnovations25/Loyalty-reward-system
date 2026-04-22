@@ -22,10 +22,17 @@ async function request<T>(
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
 
-    // Auto-clear stale admin token on 401 so the auth guard can redirect to login
-    if (res.status === 401 && tokenKey === 'admin_token') {
-      localStorage.removeItem('admin_token');
-      localStorage.removeItem('admin_user');
+    // Auto-clear stale tokens on 401 so the auth guard can redirect to login
+    if (res.status === 401) {
+      if (tokenKey === 'admin_token') {
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_user');
+      } else {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
+      // Force reload to update React context and trigger redirect via Router
+      window.location.reload();
     }
 
     throw new Error(body.error || body.message || 'Request failed');

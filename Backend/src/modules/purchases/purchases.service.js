@@ -26,10 +26,12 @@ async function create(shopId, data) {
 
   const purchase = await db.$transaction(async (tx) => {
     const p = await tx.purchase.create({ data: { ...data, shopId, pointsEarned } });
-    await tx.customerPoints.upsert({
-      where: { customerId: data.customerId },
-      update: { points: { increment: pointsEarned } },
-      create: { customerId: data.customerId, shopId, points: pointsEarned },
+    await tx.customer.update({
+      where: { id: data.customerId },
+      data: { 
+        totalPoints: { increment: pointsEarned },
+        lastActivityAt: new Date()
+      },
     });
     return p;
   });

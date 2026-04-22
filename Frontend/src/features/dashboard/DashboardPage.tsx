@@ -107,8 +107,8 @@ export default function DashboardPage() {
             </svg>
           </div>
           <div className="db-stat-info">
-            <span className="db-stat-label">Points Issued</span>
-            <span className="db-stat-value">{(Number(stats?.totalRevenue ?? 0) * 100).toLocaleString()}</span>
+            <span className="db-stat-label">Points Balance</span>
+            <span className="db-stat-value">{(stats?.totalPointsOutstanding ?? 0).toLocaleString()}</span>
           </div>
         </div>
 
@@ -119,7 +119,7 @@ export default function DashboardPage() {
             </svg>
           </div>
           <div className="db-stat-info">
-            <span className="db-stat-label">Points Redeemed</span>
+            <span className="db-stat-label">Redemptions</span>
             <span className="db-stat-value">{stats?.totalRedemptions ?? 0}</span>
           </div>
         </div>
@@ -138,31 +138,10 @@ export default function DashboardPage() {
               No recent activity found. Start recording purchases to see them here!
             </div>
           ) : (
-            <table className="db-table">
-              <thead>
-                <tr>
-                  <th>Customer</th>
-                  <th>Points</th>
-                  <th>Amount</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* Normally we'd fetch actual list but using summary count logic for now */}
-                <tr>
-                  <td>Sample Customer</td>
-                  <td>120</td>
-                  <td>$45.00</td>
-                  <td><span className="shop-badge shop-badge--green">Completed</span></td>
-                </tr>
-                <tr>
-                  <td>Another Person</td>
-                  <td>300</td>
-                  <td>$120.00</td>
-                  <td><span className="shop-badge shop-badge--green">Completed</span></td>
-                </tr>
-              </tbody>
-            </table>
+            <div style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>📋</div>
+              <p style={{ margin: 0, fontSize: '0.9rem' }}>Detailed activity logs are available in the <strong>Purchases</strong> and <strong>Redemptions</strong> sections.</p>
+            </div>
           )}
         </div>
 

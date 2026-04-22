@@ -10,22 +10,22 @@ const PLANS = {
 
 // Feature flag keys (must match plan_features.feature_key in DB)
 const FEATURES = {
-  SMS_CAMPAIGNS: 'sms_campaigns',
-  GIFT_CARDS: 'gift_cards',
-  ADVANCED_REPORTS: 'advanced_reports',
-  POINTS_EXPIRY: 'points_expiry',
-  CUSTOM_REWARDS: 'custom_rewards',
-  MULTI_TIER: 'multi_tier',
-  API_ACCESS: 'api_access',
-  WHITE_LABEL: 'white_label',
+  GIFT_CARDS:            'gift_cards',
+  REWARDS_MILESTONES:    'rewards_milestones',
+  AUDIT_LOG:             'audit_log',
+  SMS_MESSAGING:         'sms_messaging',
+  PROMOTIONS_BROADCASTS: 'promotions_broadcasts',
+  REPORTS_EXPORTS:       'reports_exports',
+  WHATSAPP_MESSAGING:    'whatsapp_messaging',
+  MULTIPLE_USERS:        'multiple_users',
 };
 
 // Usage limit keys (must match plan_limits.limit_key in DB)
 const LIMITS = {
-  CUSTOMERS: 'customers',
-  SMS_PER_MONTH: 'sms_per_month',
-  GIFT_CARDS: 'gift_cards',
-  STAFF_ACCOUNTS: 'staff_accounts',
+  CUSTOMERS:      'max_customers',
+  SMS_PER_MONTH:  'max_sms_pm',
+  GIFT_CARDS:     'max_gift_cards_pm',
+  STAFF_ACCOUNTS: 'max_users',
 };
 
 // Token expiry for trials (days)
