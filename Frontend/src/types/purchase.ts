@@ -6,6 +6,7 @@ export interface Purchase {
   amount: string; // Decimal serialised as string
   pointsEarned: number;
   pointsRedeemed: number; // annotated by repository from linked Redemption row
+  discountValue?: number;  // annotated by repository from linked Redemption row
   isVoided: boolean;
   voidedBy: string | null;
   voidedAt: string | null;

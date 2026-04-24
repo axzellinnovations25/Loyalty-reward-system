@@ -80,7 +80,7 @@ export default function CustomerDetailPage() {
         <div style={{ fontSize: '4rem', marginBottom: '16px' }}>👤</div>
         <h2 style={{ color: '#1e293b', fontWeight: 900, marginBottom: '8px' }}>Member Not Found</h2>
         <p style={{ color: '#64748b', marginBottom: '24px', maxWidth: '400px' }}>{error || 'The requested customer profile could not be located in your directory.'}</p>
-        <button className="shop-btn shop-btn--primary" onClick={() => navigate('/customers')}>
+        <button className="adm-btn adm-btn--primary" onClick={() => navigate('/customers')}>
           Back to Directory
         </button>
       </div>
@@ -124,14 +124,14 @@ export default function CustomerDetailPage() {
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
            <button 
-             className="shop-btn shop-btn--ghost" 
+             className="adm-btn adm-btn--ghost" 
              onClick={() => setShowEditModal(true)}
              style={{ padding: '10px 16px' }}
            >
              Edit Profile
            </button>
            <button 
-             className="shop-btn shop-btn--primary"
+             className="adm-btn adm-btn--primary"
              onClick={() => navigate(`/purchases/new?customerId=${customer.id}`)}
              style={{ padding: '10px 16px' }}
            >

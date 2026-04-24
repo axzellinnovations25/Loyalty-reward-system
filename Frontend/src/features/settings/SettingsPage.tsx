@@ -128,7 +128,7 @@ export default function SettingsPage() {
         </div>
         <button
           id="settings-save-btn"
-          className="shop-btn shop-btn--primary"
+          className="adm-btn adm-btn--primary"
           style={{ padding: '10px 22px', fontWeight: 700, fontSize: '0.875rem' }}
           onClick={handleSave}
           disabled={saving}
@@ -390,7 +390,7 @@ export default function SettingsPage() {
             Changes apply to all future transactions
           </span>
           <button
-            className="shop-btn shop-btn--primary"
+            className="adm-btn adm-btn--primary"
             style={{ padding: '9px 20px', fontWeight: 700 }}
             onClick={handleSave}
             disabled={saving}

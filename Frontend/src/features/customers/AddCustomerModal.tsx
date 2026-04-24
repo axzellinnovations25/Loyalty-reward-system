@@ -13,33 +13,29 @@ export default function AddCustomerModal({ onClose, onSuccess }: AddCustomerModa
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionType, setActionType] = useState<'save' | 'save_and_purchase'>('save');
-  
   const overlayRef = useRef<HTMLDivElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     nameRef.current?.focus();
-  }, []);
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const digits = phone.replace(/\D/g, '');
     if (!name.trim()) { setError('Name is required.'); return; }
-    
-    // Validate that we have exactly 9 digits and the first digit is 7
-    if (digits.length !== 9 || digits[0] !== '7') { 
-      setError('Please enter a valid 9-digit mobile number starting with 7 (e.g. 7XXXXXXXX).'); 
-      return; 
+    if (digits.length !== 9 || digits[0] !== '7') {
+      setError('Please enter a valid 9-digit mobile number starting with 7 (e.g. 7XXXXXXXX).');
+      return;
     }
-    
     const fullPhone = '+94' + digits;
-
     setLoading(true);
     setError(null);
-
     try {
       const res = await customersApi.create({ name: name.trim(), phone: fullPhone });
-      // Backend returns: { success: true, data: { id, name, phone, ... } }
       const customer = (res as any).data ?? res;
       onSuccess(customer, actionType === 'save_and_purchase');
     } catch (err: any) {
@@ -49,119 +45,133 @@ export default function AddCustomerModal({ onClose, onSuccess }: AddCustomerModa
     }
   };
 
-
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === overlayRef.current) onClose();
-  };
-
   return (
-    <div 
-      ref={overlayRef} 
-      onClick={handleOverlayClick}
-      style={{ 
-        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(4px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-        padding: '20px'
-      }}
+    <div
+      ref={overlayRef}
+      className="adm-modal-overlay"
+      onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
-      <div style={{ 
-        width: '100%', maxWidth: '440px', background: '#fff', borderRadius: '12px',
-        boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-        overflow: 'hidden'
-      }}>
+      <div className="adm-modal adm-modal--sm">
         {/* Header */}
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid #eee', display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ background: '#a80028', color: '#fff', width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-            </svg>
+        <div className="adm-modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: 'linear-gradient(135deg, var(--a-400), var(--a-700))',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+            }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+                <line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" />
+              </svg>
+            </div>
+            <div>
+              <p className="adm-modal-title">Register New Customer</p>
+              <p className="adm-modal-subtitle">Enter details to create a member profile.</p>
+            </div>
           </div>
-          <div style={{ flex: 1 }}>
-            <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#1e293b' }}>Register New Customer</h2>
-            <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>Enter details below to create member profile.</p>
-          </div>
-          <button 
-            type="button" 
-            onClick={onClose} 
-            style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          <button type="button" className="adm-modal-close" onClick={onClose} aria-label="Close">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
 
-        {/* Content */}
-        <form onSubmit={handleSubmit} style={{ padding: '24px' }}>
-          {error && (
-            <div style={{ 
-              marginBottom: '20px', padding: '10px 12px', borderRadius: '6px', 
-              backgroundColor: '#fff1f2', border: '1px solid #ffe4e6', color: '#be123c',
-              fontSize: '0.8rem', fontWeight: 600, display: 'flex', gap: '8px'
-            }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              <span>{error}</span>
-            </div>
-          )}
+        {/* Body */}
+        <form onSubmit={handleSubmit}>
+          <div className="adm-modal-body">
+            {error && (
+              <div className="adm-alert adm-alert--error" role="alert">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                {error}
+              </div>
+            )}
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: '6px' }}>Membership Name</label>
-            <input
-              ref={nameRef}
-              type="text"
-              placeholder="e.g. Priyantha Silva"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              style={{
-                width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #cbd5e1',
-                fontSize: '0.9rem', color: '#1e293b', boxSizing: 'border-box'
-              }}
-              required
-            />
-          </div>
-
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: '6px' }}>Mobile Communication</label>
-            <div style={{ display: 'flex', border: '1px solid #cbd5e1', borderRadius: '6px', overflow: 'hidden' }}>
-              <div style={{ padding: '0 12px', background: '#f1f5f9', color: '#64748b', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', borderRight: '1px solid #cbd5e1' }}>+94</div>
+            <div className="adm-form-group">
+              <label className="adm-label" htmlFor="add-customer-name">
+                Full Name <span className="adm-label-required">*</span>
+              </label>
               <input
+                id="add-customer-name"
+                ref={nameRef}
                 type="text"
-                placeholder="771234567"
-                value={phone}
-                onChange={(e) => {
-                  let val = e.target.value.replace(/\D/g, '');
-                  if (val.startsWith('0')) val = val.slice(1);
-                  if (val.startsWith('94')) val = val.slice(2);
-                  setPhone(val.slice(0, 9));
-                }}
-                style={{ flex: 1, padding: '10px 12px', border: 'none', outline: 'none', fontSize: '1rem', color: '#1e293b' }}
+                className="adm-input"
+                placeholder="e.g. Priyantha Silva"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 required
               />
             </div>
-            <p style={{ marginTop: '6px', fontSize: '0.7rem', color: '#94a3b8' }}>
-              Enter the 9 digits after +94 (should start with 7).
-            </p>
+
+            <div className="adm-form-group">
+              <label className="adm-label" htmlFor="add-customer-phone">
+                Mobile Number <span className="adm-label-required">*</span>
+              </label>
+              <div style={{
+                display: 'flex', border: '1px solid var(--border)',
+                borderRadius: 'var(--r-sm)', overflow: 'hidden',
+                transition: 'border-color 0.2s, box-shadow 0.2s',
+              }}
+                onFocusCapture={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--a-400)';
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = '0 0 0 3px rgba(168,0,40,0.1)';
+                }}
+                onBlurCapture={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)';
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = 'none';
+                }}
+              >
+                <div style={{
+                  padding: '0 12px', background: 'var(--n-50)', color: 'var(--text-secondary)',
+                  fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center',
+                  borderRight: '1px solid var(--border)', flexShrink: 0,
+                }}>+94</div>
+                <input
+                  id="add-customer-phone"
+                  type="text"
+                  placeholder="771234567"
+                  value={phone}
+                  onChange={(e) => {
+                    let val = e.target.value.replace(/\D/g, '');
+                    if (val.startsWith('0')) val = val.slice(1);
+                    if (val.startsWith('94')) val = val.slice(2);
+                    setPhone(val.slice(0, 9));
+                  }}
+                  style={{ flex: 1, padding: '9px 12px', border: 'none', outline: 'none', fontSize: '0.875rem', color: 'var(--text-primary)', fontFamily: 'var(--font)' }}
+                  required
+                />
+              </div>
+              <p className="adm-hint">9 digits after +94, starting with 7</p>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <button 
-              type="submit" 
+          {/* Footer */}
+          <div className="adm-modal-footer" style={{ flexDirection: 'column', gap: 8 }}>
+            <button
+              id="add-customer-submit"
+              type="submit"
+              className="adm-btn adm-btn--primary"
+              style={{ width: '100%', justifyContent: 'center' }}
               onClick={() => setActionType('save')}
               disabled={loading}
-              className="shop-btn shop-btn--primary"
-              style={{ width: '100%', padding: '12px', borderRadius: '6px', fontSize: '0.9rem' }}
             >
-              {loading && actionType === 'save' ? 'Processing...' : 'Confirm Registration'}
+              {loading && actionType === 'save'
+                ? <><span className="adm-spinner" style={{ marginRight: 6 }} />Processing…</>
+                : 'Confirm Registration'}
             </button>
-            <button 
-              type="submit" 
+            <button
+              id="add-customer-purchase"
+              type="submit"
+              className="adm-btn adm-btn--ghost"
+              style={{ width: '100%', justifyContent: 'center', color: 'var(--a-600)', borderColor: 'var(--a-100)' }}
               onClick={() => setActionType('save_and_purchase')}
               disabled={loading}
-              className="shop-btn shop-btn--ghost"
-              style={{ width: '100%', padding: '12px', borderRadius: '6px', fontSize: '0.9rem', color: '#a80028', borderColor: '#ffe4e6' }}
             >
-              {loading && actionType === 'save_and_purchase' ? 'Processing...' : 'Register & Record Purchase'}
+              {loading && actionType === 'save_and_purchase'
+                ? <><span className="adm-spinner adm-spinner--dark" style={{ marginRight: 6 }} />Processing…</>
+                : 'Register & Record Purchase'}
             </button>
           </div>
         </form>

@@ -1,0 +1,11 @@
+const fs = require('fs');
+const file = 'f:/Intern- axzell/Projects/Real/Loyalty-reward-system/Frontend/src/features/purchases/NewPurchasePage.tsx';
+let c = fs.readFileSync(file, 'utf8');
+c = c.replace(/âˆ’/g, '-');
+c = c.replace(/â€”/g, '-');
+c = c.replace(/â€¦/g, '...');
+c = c.replace(/â†’/g, '->');
+c = c.replace(/â† /g, '<-');
+c = c.replace(/âœ“/g, '✓');
+fs.writeFileSync(file, c, 'utf8');
+console.log('Done!');
