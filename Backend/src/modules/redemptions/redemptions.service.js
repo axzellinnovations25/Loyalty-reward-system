@@ -2,6 +2,28 @@
 
 const repository = require('./redemptions.repository');
 const db = require('../../config/db');
+const sms = require('../../services/sms');
+const logger = require('../../utils/logger');
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+/**
+ * Given shop settings and points to redeem, calculate the Rs. discount.
+ * flat_amount:      discount = pointsRedeemed / redemptionValue   (e.g. 500 pts = Rs 1)
+ * percent_of_bill:  discount = (redemptionValue / 100) * billAmount
+ */
+function calcDiscount(settings, pointsRedeemed, billAmount = 0) {
+  const rate = Number(settings.redemptionValue);
+  if (settings.maxRedeemMode === 'flat_amount') {
+    return pointsRedeemed / rate;
+  }
+  if (settings.maxRedeemMode === 'percent_of_bill') {
+    return (rate / 100) * billAmount;
+  }
+  return 0;
+}
+
+// ── Service functions ──────────────────────────────────────────────────────────
 
 async function list(shopId, query) {
   return repository.findAll(shopId, query);
@@ -13,82 +35,172 @@ async function getById(shopId, id) {
   return redemption;
 }
 
-async function create(shopId, userId, data) {
-  const { customerId, pointsRedeemed, billAmount, notes } = data;
-
+/**
+ * Preview: given a customerId + pointsToRedeem, return the discount value.
+ * No state is changed.
+ */
+async function preview(shopId, customerId, pointsToRedeem) {
   const [customer, settings] = await Promise.all([
-    db.customer.findFirst({ where: { id: customerId, shopId } }),
-    db.shopSettings.findUnique({ where: { shopId } })
+    db.customer.findFirst({ where: { id: customerId, shopId, deletedAt: null } }),
+    db.shopSettings.findUnique({ where: { shopId } }),
   ]);
 
   if (!customer) throw Object.assign(new Error('Customer not found'), { status: 404 });
-  if (!settings) throw Object.assign(new Error('Shop settings not found'), { status: 400 });
+  if (!settings)  throw Object.assign(new Error('Shop settings not configured'), { status: 400 });
 
-  const currentPoints = customer.totalPoints;
-  if (currentPoints < pointsRedeemed) {
+  const pts = Number(pointsToRedeem);
+
+  if (pts < 1) throw Object.assign(new Error('Points to redeem must be at least 1'), { status: 422 });
+  if (customer.totalPoints < pts) {
     throw Object.assign(
-      new Error(`Insufficient points. Required: ${pointsRedeemed}, Available: ${currentPoints}`),
+      new Error(`Insufficient points. Available: ${customer.totalPoints}`),
+      { status: 422 }
+    );
+  }
+  if (settings.minRedeemPoints && pts < settings.minRedeemPoints) {
+    throw Object.assign(
+      new Error(`Minimum ${settings.minRedeemPoints} points required to redeem`),
       { status: 422 }
     );
   }
 
-  if (settings.minRedeemPoints && pointsRedeemed < settings.minRedeemPoints) {
+  const discountValue = calcDiscount(settings, pts);
+
+  return {
+    pointsToRedeem: pts,
+    discountValue: discountValue.toFixed(2),
+    remainingPoints: customer.totalPoints - pts,
+    minRedeemPoints: settings.minRedeemPoints,
+    maxRedeemMode: settings.maxRedeemMode,
+    redemptionValue: Number(settings.redemptionValue),
+  };
+}
+
+async function create(shopId, userId, data) {
+  const { customerId, pointsRedeemed, billAmount, notes } = data;
+
+  const [customer, settings] = await Promise.all([
+    db.customer.findFirst({ where: { id: customerId, shopId, deletedAt: null } }),
+    db.shopSettings.findUnique({ where: { shopId } }),
+  ]);
+
+  if (!customer) throw Object.assign(new Error('Customer not found'), { status: 404 });
+  if (!settings)  throw Object.assign(new Error('Shop settings not found'), { status: 400 });
+
+  const pts = Number(pointsRedeemed);
+
+  // Validate points
+  if (customer.totalPoints < pts) {
+    throw Object.assign(
+      new Error(`Insufficient points. Required: ${pts}, Available: ${customer.totalPoints}`),
+      { status: 422 }
+    );
+  }
+  if (settings.minRedeemPoints && pts < settings.minRedeemPoints) {
     throw Object.assign(
       new Error(`Minimum points required to redeem is ${settings.minRedeemPoints}`),
       { status: 422 }
     );
   }
 
-  // Calculate discount based on settings
-  let discountValue = 0;
-  const redemptionRate = Number(settings.redemptionValue); // e.g. 500 (for Flat) or 100 (for %)
+  // Calculate discount
+  let discountValue = calcDiscount(settings, pts, billAmount);
 
-  if (settings.maxRedeemMode === 'flat_amount') {
-    // Flat Amount Method: redemptionRate points = Rs 1 discount
-    discountValue = (pointsRedeemed / redemptionRate);
-  } else if (settings.maxRedeemMode === 'percent_of_bill') {
-    // Percentage Method: redemptionRate points = 1% discount
-    const percentDiscount = (pointsRedeemed / redemptionRate);
-    discountValue = (percentDiscount / 100) * billAmount;
-  }
-
-  // Enforce Max Redemption Limit if set
-  if (settings.maxRedeemValue) {
-    const limit = Number(settings.maxRedeemValue);
-    if (settings.maxRedeemMode === 'flat_amount' && discountValue > limit) {
-      discountValue = limit;
-    } else if (settings.maxRedeemMode === 'percent_of_bill') {
-      const maxDiscountValue = (limit / 100) * billAmount;
-      if (discountValue > maxDiscountValue) {
-        discountValue = maxDiscountValue;
-      }
-    }
-  }
-
-  // Ensure discount doesn't exceed the actual bill amount
+  // Discount can't exceed the bill
   if (discountValue > billAmount) discountValue = billAmount;
 
-  await db.$transaction([
-    db.redemption.create({ 
-      data: { 
-        shopId, 
-        customerId, 
-        userId, 
-        pointsRedeemed, 
-        discountValue,
-        notes 
-      } 
+  // Persist atomically
+  const [redemption] = await db.$transaction([
+    db.redemption.create({
+      data: { shopId, customerId, userId, pointsRedeemed: pts, discountValue, notes },
+      include: { customer: true },
     }),
     db.customer.update({
       where: { id: customerId },
-      data: { 
-        totalPoints: { decrement: pointsRedeemed },
-        lastActivityAt: new Date()
+      data: {
+        totalPoints: { decrement: pts },
+        lastActivityAt: new Date(),
       },
     }),
   ]);
 
-  return repository.findAll(shopId, { customerId, limit: 1 });
+  // Send SMS (best-effort, never fail the response)
+  try {
+    const newBalance = customer.totalPoints - pts;
+    const message =
+      `Hi ${customer.name}, you redeemed ${pts} loyalty points for a Rs. ${discountValue.toFixed(2)} discount. ` +
+      `Remaining balance: ${newBalance} pts. Thank you!`;
+    await sms.send(shopId, customer.phone, message);
+
+    // Log the message
+    await db.messageLog.create({
+      data: {
+        shopId,
+        customerId,
+        phone: customer.phone,
+        messageType: 'transaction',
+        channel: 'sms',
+        content: message,
+        status: 'sent',
+      },
+    });
+  } catch (smsErr) {
+    logger.warn('SMS notification failed for redemption', {
+      shopId,
+      customerId,
+      error: smsErr.message,
+    });
+    // Try to log failure
+    try {
+      await db.messageLog.create({
+        data: {
+          shopId,
+          customerId,
+          phone: customer.phone,
+          messageType: 'transaction',
+          channel: 'sms',
+          content: '',
+          status: 'failed',
+        },
+      });
+    } catch (_) { /* ignore */ }
+  }
+
+  return redemption;
 }
 
-module.exports = { list, getById, create };
+async function voidRedemption(shopId, id, userId) {
+  const redemption = await db.redemption.findUnique({ where: { id, shopId }, include: { customer: true } });
+  if (!redemption) throw Object.assign(new Error('Redemption not found'), { status: 404 });
+  if (redemption.isVoided) throw Object.assign(new Error('Redemption is already voided'), { status: 400 });
+
+  return db.$transaction(async (tx) => {
+    const updated = await tx.redemption.update({
+      where: { id },
+      data: { isVoided: true },
+    });
+
+    await tx.customer.update({
+      where: { id: redemption.customerId },
+      data: { totalPoints: { increment: redemption.pointsRedeemed } },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        shopId,
+        userId,
+        action: 'VOID_REDEMPTION',
+        entityType: 'REDEMPTION',
+        entityId: id,
+        details: {
+          pointsRestored: redemption.pointsRedeemed,
+          discountReversed: Number(redemption.discountValue),
+        },
+      },
+    });
+
+    return updated;
+  });
+}
+
+module.exports = { list, getById, preview, create, voidRedemption };

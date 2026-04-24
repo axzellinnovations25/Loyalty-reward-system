@@ -9,7 +9,7 @@ async function findAll(shopId, query) {
 
   const [items, total] = await Promise.all([
     db.redemption.findMany({ where, skip, take, orderBy: { createdAt: 'desc' },
-      include: { customer: { select: { id: true, name: true, phone: true } }, reward: true } }),
+      include: { customer: { select: { id: true, name: true, phone: true } } } }),
     db.redemption.count({ where }),
   ]);
 
@@ -17,11 +17,11 @@ async function findAll(shopId, query) {
 }
 
 async function findById(id, shopId) {
-  return db.redemption.findFirst({ where: { id, shopId }, include: { customer: true, reward: true } });
+  return db.redemption.findFirst({ where: { id, shopId }, include: { customer: true } });
 }
 
 async function create(data) {
-  return db.redemption.create({ data, include: { customer: true, reward: true } });
+  return db.redemption.create({ data, include: { customer: true } });
 }
 
 module.exports = { findAll, findById, create };

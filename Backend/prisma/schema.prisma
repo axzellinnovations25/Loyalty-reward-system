@@ -15,10 +15,7 @@ enum MaxRedeemMode {
   percent_of_bill
 }
 
-enum RedemptionMode {
-  partial
-  full_only
-}
+
 
 enum GiftCardStatus {
   active
@@ -148,14 +145,8 @@ model ShopSettings {
   redemptionValue    Decimal        @default(500) @db.Decimal(10, 2)
   minRedeemPoints    Int            @default(0)
   maxRedeemMode      MaxRedeemMode  @default(flat_amount)
-  maxRedeemValue     Decimal?       @db.Decimal(10, 2)
-  redemptionMode     RedemptionMode @default(partial)
   pointsExpiryMonths Int            @default(0)
   expiryWarningDays  Int            @default(14)
-  smsEnabled         Boolean        @default(false)
-  textlkSenderId     String?
-  textlkApiKey       String?        // AES-256 encrypted at rest
-  textlkApiUrl       String?
 
   shop Shop @relation(fields: [shopId], references: [id])
 }

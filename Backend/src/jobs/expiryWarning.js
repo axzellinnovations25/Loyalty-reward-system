@@ -18,7 +18,7 @@ async function run() {
   let processedCount = 0;
 
   for (const shop of shops) {
-    if (!shop.settings || shop.settings.pointsExpiryMonths === 0 || !shop.settings.smsEnabled) continue;
+    if (!shop.settings || shop.settings.pointsExpiryMonths === 0) continue;
 
     const expiryMonths = shop.settings.pointsExpiryMonths;
     const warningDays = shop.settings.expiryWarningDays || 14;
@@ -70,26 +70,7 @@ async function run() {
       const expiryDate = new Date(customer.lastActivityAt || customer.createdAt);
       expiryDate.setMonth(expiryDate.getMonth() + expiryMonths);
 
-      try {
-        await sms.send(
-          shop.id,
-          customer.phone,
-          `Reminder: Your ${customer.totalPoints} loyalty points expire on ${expiryDate.toDateString()}. Redeem them soon!`
-        );
-
-        await db.messageLog.create({
-          data: {
-            shopId: shop.id,
-            customerId: customer.id,
-            phone: customer.phone,
-            messageType: 'expiry_warning',
-            content: `Reminder: Your ${customer.totalPoints} loyalty points expire on ${expiryDate.toDateString()}. Redeem them soon!`
-          }
-        });
         processedCount++;
-      } catch (err) {
-        logger.warn('Failed to send expiry warning SMS', { customerId: customer.id, err: err.message });
-      }
     }
   }
 

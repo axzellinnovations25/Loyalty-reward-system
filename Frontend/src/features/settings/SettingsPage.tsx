@@ -23,21 +23,16 @@ export default function SettingsPage() {
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
   const [toast,    setToast]    = useState<Toast>(null);
-  const [hasApiKey, setHasApiKey] = useState(false);
+
 
   /* ── form state – all start empty until loaded from API ───── */
   const [pointsPerAmount,    setPointsPerAmount]    = useState('');
   const [redemptionValue,    setRedemptionValue]    = useState('');
   const [minRedeemPoints,    setMinRedeemPoints]    = useState('');
   const [maxRedeemMode,      setMaxRedeemMode]      = useState<'flat_amount' | 'percent_of_bill'>('flat_amount');
-  const [maxRedeemValue,     setMaxRedeemValue]     = useState('');
-  const [redemptionMode,     setRedemptionMode]     = useState<'partial' | 'full_only'>('partial');
   const [pointsExpiryMonths, setPointsExpiryMonths] = useState('');
   const [expiryWarningDays,  setExpiryWarningDays]  = useState('');
-  const [smsEnabled,         setSmsEnabled]         = useState(false);
-  const [textlkSenderId,     setTextlkSenderId]     = useState('');
-  const [textlkApiKey,       setTextlkApiKey]       = useState('');
-  const [textlkApiUrl,       setTextlkApiUrl]       = useState('');
+
 
   /* ── Load saved settings once ───────────────────────────── */
   const load = useCallback(async () => {
@@ -51,14 +46,9 @@ export default function SettingsPage() {
       if (s.redemptionValue     != null) setRedemptionValue(String(s.redemptionValue));
       if (s.minRedeemPoints     != null) setMinRedeemPoints(String(s.minRedeemPoints));
       if (s.maxRedeemMode       != null) setMaxRedeemMode(s.maxRedeemMode);
-      if (s.maxRedeemValue      != null) setMaxRedeemValue(String(s.maxRedeemValue));
-      if (s.redemptionMode      != null) setRedemptionMode(s.redemptionMode);
       if (s.pointsExpiryMonths  != null) setPointsExpiryMonths(String(s.pointsExpiryMonths));
       if (s.expiryWarningDays   != null) setExpiryWarningDays(String(s.expiryWarningDays));
-      if (s.smsEnabled          != null) setSmsEnabled(s.smsEnabled);
-      if (s.textlkSenderId      != null) setTextlkSenderId(s.textlkSenderId);
-      if (s.textlkApiUrl        != null) setTextlkApiUrl(s.textlkApiUrl);
-      setHasApiKey(s.hasApiKey ?? false);
+
     } catch {
       /* No settings saved yet — fields remain blank. That is expected. */
     } finally {
@@ -82,20 +72,7 @@ export default function SettingsPage() {
       if (toNum(expiryWarningDays)  !== undefined) payload.expiryWarningDays  = toNum(expiryWarningDays)!;
 
       payload.maxRedeemMode  = maxRedeemMode;
-      payload.redemptionMode = redemptionMode;
-      payload.smsEnabled     = smsEnabled;
 
-      /* Max redeem value: send null to clear, number to set */
-      payload.maxRedeemValue = maxRedeemValue.trim() !== ''
-        ? toNum(maxRedeemValue) ?? null
-        : null;
-
-      /* SMS fields — only when SMS is enabled */
-      if (smsEnabled) {
-        if (textlkSenderId.trim()) payload.textlkSenderId = textlkSenderId.trim();
-        if (textlkApiUrl.trim())   payload.textlkApiUrl   = textlkApiUrl.trim();
-        if (textlkApiKey.trim())   payload.textlkApiKey   = textlkApiKey.trim();
-      }
 
       if (Object.keys(payload).length === 0) {
         setToast({ msg: 'Nothing to save — fill in at least one field.', type: 'error' });
@@ -104,7 +81,7 @@ export default function SettingsPage() {
 
       await settingsApi.update(payload);
 
-      if (textlkApiKey.trim()) { setHasApiKey(true); setTextlkApiKey(''); }
+
       setToast({ msg: 'Settings saved successfully!', type: 'success' });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to save settings.';
@@ -122,7 +99,7 @@ export default function SettingsPage() {
   const previewRedeem = redemptionValue.trim()
     ? (maxRedeemMode === 'flat_amount' 
         ? `${previewNum(redemptionValue)} pts = Rs. 1 off` 
-        : `${previewNum(redemptionValue)} pts = 1% off`)
+        : `${previewNum(redemptionValue)}% off bill`)
     : '–';
   const previewMin    = minRedeemPoints.trim()
     ? (Number(minRedeemPoints) === 0 ? 'No minimum' : `${previewNum(minRedeemPoints)} pts min`)
@@ -259,120 +236,95 @@ export default function SettingsPage() {
                 <span className="settings-hint">Spend Rs. X to earn 1 point</span>
               </div>
 
-              <div>
-                <label className="settings-label" htmlFor="redemption-value">
-                  Redemption Value {maxRedeemMode === 'flat_amount' ? '(pts → Rs. 1 off)' : '(pts → 1% off)'}
-                </label>
-                <div className="settings-input-suffix">
-                  <span>{maxRedeemMode === 'flat_amount' ? 'pts = Rs. 1' : 'pts = 1%'}</span>
-                  <input
-                    id="redemption-value"
-                    type="number"
-                    min="1"
-                    step="1"
-                    className="settings-input"
-                    value={redemptionValue}
-                    onChange={e => setRedemptionValue(e.target.value)}
-                    placeholder={maxRedeemMode === 'flat_amount' ? "e.g. 500" : "e.g. 100"}
-                  />
-                </div>
-                <span className="settings-hint">
-                  {maxRedeemMode === 'flat_amount' ? 'X pts = Rs. 1 off the bill' : 'X pts = 1% off the bill'}
-                </span>
-              </div>
+              {maxRedeemMode === 'flat_amount' ? (
+                <>
+                  <div>
+                    <label className="settings-label" htmlFor="redemption-value">
+                      Redemption Rate (pts → Rs. 1 off)
+                    </label>
+                    <div className="settings-input-suffix">
+                      <span>pts = Rs. 1</span>
+                      <input
+                        id="redemption-value"
+                        type="number"
+                        min="1"
+                        step="1"
+                        className="settings-input"
+                        value={redemptionValue}
+                        onChange={e => setRedemptionValue(e.target.value)}
+                        placeholder="e.g. 50"
+                      />
+                    </div>
+                    <span className="settings-hint">How many points equal Rs. 1 discount</span>
+                  </div>
+                  <div>
+                    <label className="settings-label" htmlFor="min-redeem-points">
+                      Minimum Points to Redeem
+                    </label>
+                    <div className="settings-input-suffix">
+                      <span>pts</span>
+                      <input
+                        id="min-redeem-points"
+                        type="number"
+                        min="0"
+                        step="1"
+                        className="settings-input"
+                        value={minRedeemPoints}
+                        onChange={e => setMinRedeemPoints(e.target.value)}
+                        placeholder="e.g. 50 (0 = none)"
+                      />
+                    </div>
+                    <span className="settings-hint">Minimum points balance required to redeem</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="settings-label" htmlFor="min-redeem-points">
+                      Points Needed for Discount
+                    </label>
+                    <div className="settings-input-suffix">
+                      <span>pts</span>
+                      <input
+                        id="min-redeem-points"
+                        type="number"
+                        min="1"
+                        step="1"
+                        className="settings-input"
+                        value={minRedeemPoints}
+                        onChange={e => setMinRedeemPoints(e.target.value)}
+                        placeholder="e.g. 2000"
+                      />
+                    </div>
+                    <span className="settings-hint">Customer must spend this many points</span>
+                  </div>
+                  <div>
+                    <label className="settings-label" htmlFor="redemption-value">
+                      Discount Percentage (%)
+                    </label>
+                    <div className="settings-input-suffix">
+                      <span>% off</span>
+                      <input
+                        id="redemption-value"
+                        type="number"
+                        min="1"
+                        step="1"
+                        className="settings-input"
+                        value={redemptionValue}
+                        onChange={e => setRedemptionValue(e.target.value)}
+                        placeholder="e.g. 10"
+                      />
+                    </div>
+                    <span className="settings-hint">Fixed percentage off the bill amount</span>
+                  </div>
+                </>
+              )}
 
             </div>
           </div>
         </div>
 
-        {/* ════════════════════════════════════════════════════
-            CARD 3 — Redemption Limits
-        ════════════════════════════════════════════════════ */}
-        <div className="settings-card">
-          <div className="settings-card-header">
-            <div className="settings-card-icon"><RedeemIcon /></div>
-            <div>
-              <h2 className="settings-card-title">Redemption Limits</h2>
-              <p className="settings-card-desc">Control limitations and modes for redemptions</p>
-            </div>
-          </div>
-          <div className="settings-card-body">
-            <div className="settings-field">
 
-              <div>
-                <label className="settings-label" htmlFor="min-redeem-points">
-                  Min Redemption (points)
-                </label>
-                <div className="settings-input-suffix">
-                  <span>pts</span>
-                  <input
-                    id="min-redeem-points"
-                    type="number"
-                    min="0"
-                    step="1"
-                    className="settings-input"
-                    value={minRedeemPoints}
-                    onChange={e => setMinRedeemPoints(e.target.value)}
-                    placeholder="e.g. 50  (0 = none)"
-                  />
-                </div>
-                <span className="settings-hint">Leave 0 or blank for no minimum</span>
-              </div>
-
-              <div>
-                <label className="settings-label" htmlFor="max-redeem-value">
-                  Max Redemption Limit
-                </label>
-                <div className="settings-input-prefix">
-                  <span>{maxRedeemMode === 'percent_of_bill' ? '%' : 'Rs.'}</span>
-                  <input
-                    id="max-redeem-value"
-                    type="number"
-                    min="0"
-                    step="any"
-                    className="settings-input"
-                    value={maxRedeemValue}
-                    onChange={e => setMaxRedeemValue(e.target.value)}
-                    placeholder="Leave blank for no limit"
-                  />
-                </div>
-                <span className="settings-hint">Optional upper bound per transaction</span>
-              </div>
-
-            </div>
-
-            <div className="settings-field">
-
-              <div className="settings-field-full">
-                <label className="settings-label">Redemption Mode</label>
-                <div className="settings-segmented" role="group" aria-label="Redemption mode">
-                  <button
-                    id="redeem-mode-partial"
-                    type="button"
-                    className={`settings-seg-btn${redemptionMode === 'partial' ? ' active' : ''}`}
-                    onClick={() => setRedemptionMode('partial')}
-                  >
-                    Partial
-                  </button>
-                  <button
-                    id="redeem-mode-full"
-                    type="button"
-                    className={`settings-seg-btn${redemptionMode === 'full_only' ? ' active' : ''}`}
-                    onClick={() => setRedemptionMode('full_only')}
-                  >
-                    Full Balance Only
-                  </button>
-                </div>
-                <span className="settings-hint">
-                  {redemptionMode === 'partial'
-                    ? 'Customer may redeem any portion of their balance'
-                    : 'Customer must redeem their entire balance at once'}
-                </span>
-              </div>
-
-            </div>
-          </div>
-        </div>
 
         {/* ════════════════════════════════════════════════════
             CARD 3 — Points Expiry
@@ -432,111 +384,21 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* ════════════════════════════════════════════════════
-            CARD 4 — SMS Notifications
-        ════════════════════════════════════════════════════ */}
-        <div className="settings-card">
-          <div className="settings-card-header">
-            <div className="settings-card-icon"><SmsIcon /></div>
-            <div>
-              <h2 className="settings-card-title">SMS Notifications</h2>
-              <p className="settings-card-desc">Send automated messages on earn, redeem and expiry events</p>
-            </div>
-          </div>
-          <div className="settings-card-body">
-
-            {/* Toggle */}
-            <div className="settings-toggle-row">
-              <div className="settings-toggle-info">
-                <h4>Enable SMS</h4>
-                <p>Send automated SMS messages for transactions and expiry warnings</p>
-              </div>
-              <label className="settings-toggle" htmlFor="sms-enabled">
-                <input
-                  id="sms-enabled"
-                  type="checkbox"
-                  checked={smsEnabled}
-                  onChange={e => setSmsEnabled(e.target.checked)}
-                />
-                <span className="settings-toggle-slider" />
-              </label>
-            </div>
-
-            {/* SMS credentials — visible only when SMS is enabled */}
-            {smsEnabled && (
-              <div className="settings-field">
-
-                <div>
-                  <label className="settings-label" htmlFor="sms-sender-id">
-                    Sender ID
-                  </label>
-                  <input
-                    id="sms-sender-id"
-                    type="text"
-                    maxLength={11}
-                    className="settings-input"
-                    value={textlkSenderId}
-                    onChange={e => setTextlkSenderId(e.target.value)}
-                    placeholder="e.g. MYSHOP"
-                  />
-                  <span className="settings-hint">3–11 characters (text.lk sender name)</span>
-                </div>
-
-                <div>
-                  <label className="settings-label" htmlFor="sms-api-url">
-                    API URL
-                  </label>
-                  <input
-                    id="sms-api-url"
-                    type="url"
-                    className="settings-input"
-                    value={textlkApiUrl}
-                    onChange={e => setTextlkApiUrl(e.target.value)}
-                    placeholder="https://api.text.lk/..."
-                  />
-                  <span className="settings-hint">text.lk gateway endpoint</span>
-                </div>
-
-                <div className="settings-field-full">
-                  <label className="settings-label" htmlFor="sms-api-key">
-                    API Key
-                    {hasApiKey
-                      ? <span className="api-key-set-badge">✓ Key saved</span>
-                      : <span className="api-key-not-set-badge">Not configured</span>}
-                  </label>
-                  <input
-                    id="sms-api-key"
-                    type="password"
-                    className="settings-input"
-                    value={textlkApiKey}
-                    onChange={e => setTextlkApiKey(e.target.value)}
-                    placeholder={hasApiKey ? '•••••••• (leave blank to keep existing)' : 'Enter API key…'}
-                    autoComplete="new-password"
-                  />
-                  <span className="settings-hint">Stored encrypted. Leave blank to keep the existing key.</span>
-                </div>
-
-              </div>
-            )}
-
-          </div>
-
-          {/* Bottom save bar */}
-          <div className="settings-save-bar">
-            <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
-              Changes apply to all future transactions
-            </span>
-            <button
-              className="shop-btn shop-btn--primary"
-              style={{ padding: '9px 20px', fontWeight: 700 }}
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving
-                ? <><span className="settings-spinner" /> Saving…</>
-                : <><SaveIcon /> Save</>}
-            </button>
-          </div>
+        {/* Bottom save bar */}
+        <div className="settings-save-bar" style={{ marginTop: '24px' }}>
+          <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+            Changes apply to all future transactions
+          </span>
+          <button
+            className="shop-btn shop-btn--primary"
+            style={{ padding: '9px 20px', fontWeight: 700 }}
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving
+              ? <><span className="settings-spinner" /> Saving…</>
+              : <><SaveIcon /> Save</>}
+          </button>
         </div>
 
       </div>{/* /settings-body */}
@@ -580,13 +442,7 @@ function ClockIcon() {
     </svg>
   );
 }
-function SmsIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    </svg>
-  );
-}
+
 function SaveIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

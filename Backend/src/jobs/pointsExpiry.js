@@ -51,14 +51,7 @@ async function run() {
         }
       });
 
-      // Send SMS if enabled
-      if (shop.settings.smsEnabled && customer.phone) {
-        await sms.send(
-          shop.id,
-          customer.phone,
-          `Your ${customer.totalPoints} loyalty points have expired due to inactivity. Visit us to earn new points!`
-        ).catch(err => logger.warn('Failed to send expiry SMS', { customerId: customer.id, err: err.message }));
-      }
+
       
       processedCount++;
     }

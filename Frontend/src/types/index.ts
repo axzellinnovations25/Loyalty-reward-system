@@ -25,8 +25,7 @@ export type { Reward, CreateRewardRequest, UpdateRewardRequest } from './reward'
 export type {
   ShopSettings,
   UpdateShopSettingsRequest,
-  MaxRedeemMode,
-  RedemptionMode,
+  MaxRedeemMode
 } from './settings';
 export type {
   Shop,

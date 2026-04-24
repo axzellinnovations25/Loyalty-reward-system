@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { customersApi } from '../../api/customers';
 import type { Customer } from '../../types';
 import EditCustomerModal from './EditCustomerModal';
+import { purchasesApi } from '../../api/purchases';
+import { redemptionsApi } from '../../api/redemptions';
 
 export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -12,6 +14,7 @@ export default function CustomerDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'purchases' | 'redemptions'>('purchases');
   const [showEditModal, setShowEditModal] = useState(false);
+  const [voiding, setVoiding] = useState<string | null>(null);
 
   const fetchCustomer = async () => {
     if (!id) return;
@@ -19,10 +22,11 @@ export default function CustomerDetailPage() {
       setLoading(true);
       setError(null);
       const res = await customersApi.get(id);
-      const data = (res as any).data || res;
+      const data = ((res as { data?: Customer }).data || res) as Customer;
       setCustomer(data);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load customer profile.');
+    } catch (err: unknown) {
+      const e = err as Error;
+      setError(e.message || 'Failed to load customer profile.');
     } finally {
       setLoading(false);
     }
@@ -31,6 +35,34 @@ export default function CustomerDetailPage() {
   useEffect(() => {
     fetchCustomer();
   }, [id]);
+
+  const handleVoidPurchase = async (purchaseId: string) => {
+    if (!window.confirm('Are you sure you want to void this purchase? This action cannot be undone.')) return;
+    setVoiding(purchaseId);
+    try {
+      await purchasesApi.void(purchaseId);
+      await fetchCustomer();
+    } catch (err: unknown) {
+      const e = err as Error;
+      alert(e.message || 'Failed to void purchase.');
+    } finally {
+      setVoiding(null);
+    }
+  };
+
+  const handleVoidRedemption = async (redemptionId: string) => {
+    if (!window.confirm('Are you sure you want to void this redemption? This action cannot be undone.')) return;
+    setVoiding(redemptionId);
+    try {
+      await redemptionsApi.void(redemptionId);
+      await fetchCustomer();
+    } catch (err: unknown) {
+      const e = err as Error;
+      alert(e.message || 'Failed to void redemption.');
+    } finally {
+      setVoiding(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -183,7 +215,16 @@ export default function CustomerDetailPage() {
                                   {p.isVoided ? (
                                     <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#ef4444', background: '#fee2e2', padding: '4px 8px', borderRadius: '4px' }}>VOIDED</span>
                                   ) : (
-                                    <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#16a34a', background: '#dcfce7', padding: '4px 8px', borderRadius: '4px' }}>COMPLETED</span>
+                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                      <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#16a34a', background: '#dcfce7', padding: '4px 8px', borderRadius: '4px' }}>COMPLETED</span>
+                                      <button 
+                                        disabled={voiding === p.id}
+                                        onClick={() => handleVoidPurchase(p.id)}
+                                        style={{ fontSize: '0.75rem', fontWeight: 700, padding: '4px 10px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '6px', cursor: voiding === p.id ? 'not-allowed' : 'pointer' }}
+                                      >
+                                        {voiding === p.id ? '...' : 'Void'}
+                                      </button>
+                                    </div>
                                   )}
                                </td>
                             </tr>
@@ -211,7 +252,7 @@ export default function CustomerDetailPage() {
                         </thead>
                         <tbody>
                           {redemptions.map(r => (
-                            <tr key={r.id} style={{ borderBottom: '1px solid #f8fafc' }}>
+                            <tr key={r.id} style={{ borderBottom: '1px solid #f8fafc', background: r.isVoided ? '#fef2f2' : 'none' }}>
                                <td style={{ padding: '16px 24px' }}>
                                  <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '0.9rem' }}>
                                    {new Date(r.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
@@ -227,7 +268,20 @@ export default function CustomerDetailPage() {
                                  Rs. {Number(r.discountValue).toLocaleString(undefined, { minimumFractionDigits: 2 })} Discount
                                </td>
                                <td style={{ padding: '16px 24px', textAlign: 'right' }}>
-                                  <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#2563eb', background: '#dbeafe', padding: '4px 8px', borderRadius: '4px' }}>REDEEMED</span>
+                                  {r.isVoided ? (
+                                    <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#ef4444', background: '#fee2e2', padding: '4px 8px', borderRadius: '4px' }}>VOIDED</span>
+                                  ) : (
+                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                      <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#2563eb', background: '#dbeafe', padding: '4px 8px', borderRadius: '4px' }}>REDEEMED</span>
+                                      <button 
+                                        disabled={voiding === r.id}
+                                        onClick={() => handleVoidRedemption(r.id)}
+                                        style={{ fontSize: '0.75rem', fontWeight: 700, padding: '4px 10px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '6px', cursor: voiding === r.id ? 'not-allowed' : 'pointer' }}
+                                      >
+                                        {voiding === r.id ? '...' : 'Void'}
+                                      </button>
+                                    </div>
+                                  )}
                                </td>
                             </tr>
                           ))}
