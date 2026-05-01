@@ -12,10 +12,11 @@ const checkCustomerLimit = requireLimit(LIMITS.CUSTOMERS, repository.count);
 
 router.use(authenticate);
 
-router.get('/',    controller.list);
-router.get('/:id', controller.getById);
-router.post('/',   checkCustomerLimit, validateBody(createSchema), controller.create);
-router.put('/:id', validateBody(updateSchema), controller.update);
-router.delete('/:id', controller.remove);
+router.get('/',                controller.list);
+router.get('/phone/:phone',    controller.getByPhone);   // lookup by phone (for billing)
+router.get('/:id',             controller.getById);
+router.post('/',               checkCustomerLimit, validateBody(createSchema), controller.create);
+router.patch('/:id',           validateBody(updateSchema), controller.update);
+router.delete('/:id',          controller.remove);
 
 module.exports = router;

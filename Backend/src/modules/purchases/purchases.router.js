@@ -10,5 +10,6 @@ router.use(authenticate);
 router.get('/',    controller.list);
 router.get('/:id', controller.getById);
 router.post('/',   validateBody(createSchema), controller.create);
+router.post('/:id/void', controller.voidPurchase);
 
 module.exports = router;

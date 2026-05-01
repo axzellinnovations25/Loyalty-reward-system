@@ -3,13 +3,12 @@
 const Joi = require('joi');
 
 const updateSchema = Joi.object({
-  pointsPerCurrencyUnit: Joi.number().positive(),
-  pointsExpiryDays: Joi.number().integer().min(0),
-  smsSenderId: Joi.string().min(3).max(11),
-  smsApiKey: Joi.string().min(8),
-  welcomeMessage: Joi.string().max(160).allow(''),
-  birthdayMessage: Joi.string().max(160).allow(''),
-  timezone: Joi.string(),
+  pointsPerAmount:     Joi.number().positive(),
+  redemptionValue:     Joi.number().positive(),
+  minRedeemPoints:     Joi.number().integer().min(0),
+  maxRedeemMode:       Joi.string().valid('flat_amount', 'percent_of_bill'),
+  pointsExpiryMonths:  Joi.number().integer().min(0),
+  expiryWarningDays:   Joi.number().integer().min(0),
 }).min(1);
 
 function validateBody(schema) {

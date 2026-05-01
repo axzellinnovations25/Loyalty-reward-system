@@ -3,18 +3,12 @@
 const Joi = require('joi');
 
 const createSchema = Joi.object({
-  code: Joi.string().min(4).max(32).optional(),
-  initialBalance: Joi.number().positive().required(),
-  expiresAt: Joi.date().iso().optional(),
-  recipientName: Joi.string().max(100).optional().allow(''),
-  recipientPhone: Joi.string().optional().allow(''),
-  notes: Joi.string().max(500).optional().allow(''),
+  value: Joi.number().positive().required(),
+  expiryDate: Joi.date().iso().optional().allow(null),
 });
 
 const redeemSchema = Joi.object({
   code: Joi.string().required(),
-  amount: Joi.number().positive().required(),
-  customerId: Joi.string().optional(),
 });
 
 function validateBody(schema) {

@@ -648,10 +648,397 @@
   opacity: 1;
 }
 
-/* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .adm-sidebar { transform: translateX(-100%); }
   .adm-main { margin-left: 0; }
   .adm-page { padding: 16px; }
   .adm-stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ── Modal ──────────────────────────────────────────────────── */
+.adm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 10, 12, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: adm-fade-in 0.15s ease;
+}
+.adm-modal {
+  background: var(--white);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(0,0,0,0.06);
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  animation: adm-slide-up 0.2s ease;
+  overflow: hidden;
+}
+.adm-modal--sm { max-width: 400px; }
+.adm-modal--lg { max-width: 680px; }
+.adm-modal-header {
+  padding: 22px 24px 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.adm-modal-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+.adm-modal-subtitle {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin-top: 3px;
+}
+.adm-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: var(--text-muted);
+  border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+  margin-top: -2px;
+}
+.adm-modal-close:hover {
+  background: var(--n-100);
+  color: var(--text-primary);
+}
+.adm-modal-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+.adm-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+  background: var(--n-50);
+}
+
+@keyframes adm-fade-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes adm-slide-up { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ── Form utilities ─────────────────────────────────────────── */
+.adm-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+.adm-form-group:last-child { margin-bottom: 0; }
+
+.adm-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 480px) {
+  .adm-form-row { grid-template-columns: 1fr; }
+}
+
+.adm-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.adm-label-required {
+  color: var(--a-500);
+  font-size: 0.85em;
+}
+.adm-hint {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.adm-select {
+  width: 100%;
+  padding: 9px 32px 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  font-family: var(--font);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  background: var(--white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a6875' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 10px center;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.adm-select:focus {
+  border-color: var(--a-400);
+  box-shadow: 0 0 0 3px rgba(168,0,40,0.1);
+}
+
+.adm-textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  font-family: var(--font);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  background: var(--white);
+  outline: none;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.adm-textarea:focus {
+  border-color: var(--a-400);
+  box-shadow: 0 0 0 3px rgba(168,0,40,0.1);
+}
+.adm-textarea::placeholder { color: var(--n-300); }
+
+/* Input error state */
+.adm-input--error,
+.adm-select--error,
+.adm-textarea--error {
+  border-color: var(--danger);
+}
+.adm-input--error:focus,
+.adm-select--error:focus,
+.adm-textarea--error:focus {
+  box-shadow: 0 0 0 3px rgba(220,38,38,0.1);
+}
+.adm-field-error {
+  font-size: 0.75rem;
+  color: var(--danger);
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ── Divider ────────────────────────────────────────────────── */
+.adm-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 20px 0;
+  border: none;
+}
+.adm-divider--label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 20px 0;
+}
+.adm-divider--label::before,
+.adm-divider--label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── Tags (inline status labels) ───────────────────────────── */
+.adm-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.adm-tag--voided  { background: var(--n-100); color: var(--n-600); }
+.adm-tag--active  { background: var(--success-bg); color: var(--success); }
+.adm-tag--expired { background: var(--warning-bg); color: var(--warning); }
+.adm-tag--danger  { background: var(--danger-bg); color: var(--danger); }
+
+/* ── Alert banners ──────────────────────────────────────────── */
+.adm-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--r-md);
+  font-size: 0.85rem;
+  margin-bottom: 18px;
+  border: 1px solid transparent;
+}
+.adm-alert svg { flex-shrink: 0; margin-top: 1px; }
+.adm-alert--error   { background: var(--danger-bg);  color: #b91c1c; border-color: rgba(220,38,38,0.25); }
+.adm-alert--success { background: var(--success-bg); color: #15803d; border-color: rgba(22,163,74,0.25); }
+.adm-alert--warning { background: var(--warning-bg); color: #b45309; border-color: rgba(217,119,6,0.25); }
+.adm-alert--info    { background: var(--info-bg);    color: #1d4ed8; border-color: rgba(37,99,235,0.25); }
+
+/* ── Skeleton loader ────────────────────────────────────────── */
+.adm-skeleton {
+  background: linear-gradient(90deg, var(--n-100) 25%, var(--n-50) 50%, var(--n-100) 75%);
+  background-size: 200% 100%;
+  animation: adm-shimmer 1.4s infinite;
+  border-radius: var(--r-sm);
+}
+@keyframes adm-shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+/* ── Button size variants ───────────────────────────────────── */
+.adm-btn--sm {
+  font-size: 0.78rem;
+  padding: 6px 12px;
+}
+.adm-btn--lg {
+  font-size: 0.9rem;
+  padding: 11px 22px;
+}
+.adm-btn--icon {
+  padding: 8px;
+  width: 34px;
+  height: 34px;
+}
+
+/* ── Receipt / success card ─────────────────────────────────── */
+.adm-receipt {
+  background: linear-gradient(135deg, var(--a-900) 0%, var(--a-700) 100%);
+  border-radius: var(--r-lg);
+  padding: 24px;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+.adm-receipt::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 140px; height: 140px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+}
+.adm-receipt-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 6px;
+}
+.adm-receipt-value {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.adm-receipt-meta {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.6);
+  margin-top: 6px;
+}
+
+/* ── Points badge (prominent) ───────────────────────────────── */
+.adm-points-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--a-100);
+  color: var(--a-700);
+  font-size: 0.9rem;
+  font-weight: 800;
+  padding: 6px 14px;
+  border-radius: 30px;
+  border: 1.5px solid rgba(168,0,40,0.2);
+}
+.adm-points-badge--large {
+  font-size: 1.1rem;
+  padding: 8px 18px;
+}
+
+/* ── Customer avatar ────────────────────────────────────────── */
+.adm-avatar-md {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  background: var(--a-100);
+  color: var(--a-600);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  border: 2px solid rgba(168,0,40,0.15);
+}
+.adm-avatar-lg {
+  width: 56px; height: 56px;
+  font-size: 1.3rem;
+}
+
+/* ── Info row (label + value pairs) ────────────────────────── */
+.adm-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.adm-info-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 3px;
+}
+.adm-info-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ── Pagination ─────────────────────────────────────────────── */
+.adm-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.adm-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.adm-page-btn {
+  width: 30px; height: 30px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--white);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.adm-page-btn:hover { background: var(--n-50); color: var(--text-primary); }
+.adm-page-btn.active { background: var(--a-600); border-color: var(--a-600); color: #fff; }
+.adm-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }

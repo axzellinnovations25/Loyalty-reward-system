@@ -12,8 +12,9 @@ const { createSchema, redeemSchema, validateBody } = require('./gift-cards.valid
 router.use(authenticate, requireFeature(FEATURES.GIFT_CARDS));
 
 router.get('/',       controller.list);
+router.get('/validate/:code', controller.validate);
 router.get('/:id',    controller.getById);
-router.post('/',      requireLimit(LIMITS.GIFT_CARDS, repository.count), validateBody(createSchema), controller.create);
+router.post('/',      requireLimit(LIMITS.GIFT_CARDS, repository.countThisMonth), validateBody(createSchema), controller.create);
 router.post('/redeem', validateBody(redeemSchema), controller.redeem);
 
 module.exports = router;

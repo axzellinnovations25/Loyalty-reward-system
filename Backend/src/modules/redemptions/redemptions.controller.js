@@ -5,6 +5,8 @@ const { ok, created } = require('../../utils/apiResponse');
 
 const list    = async (req, res, next) => { try { const { items, meta } = await service.list(req.shopId, req.query); return ok(res, items, meta); } catch (e) { next(e); } };
 const getById = async (req, res, next) => { try { return ok(res, await service.getById(req.shopId, req.params.id)); } catch (e) { next(e); } };
-const create  = async (req, res, next) => { try { return created(res, await service.create(req.shopId, req.body)); } catch (e) { next(e); } };
+const preview = async (req, res, next) => { try { return ok(res, await service.preview(req.shopId, req.query.customerId, Number(req.query.pointsToRedeem))); } catch (e) { next(e); } };
+const create  = async (req, res, next) => { try { return created(res, await service.create(req.shopId, req.user.userId, req.body)); } catch (e) { next(e); } };
+const voidRedemption = async (req, res, next) => { try { return ok(res, await service.voidRedemption(req.shopId, req.params.id, req.user.userId)); } catch (e) { next(e); } };
 
-module.exports = { list, getById, create };
+module.exports = { list, getById, preview, create, voidRedemption };

@@ -3,13 +3,13 @@
 const db = require('../config/db');
 const cache = require('./cache');
 
-const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+const CACHE_TTL = 3 * 60 * 1000; // 3 minutes
 
 /**
  * Resolves the active plan and feature/limit entitlements for a shop.
  * Caches the result to reduce DB hits.
  *
- * @returns {{ planId, features: Set<string>, limits: Map<string,number> }}
+ * @returns {{ planId: string, features: Set<string>, limits: Map<string,number> }}
  */
 async function resolve(shopId) {
   const cacheKey = `entitlements:${shopId}`;
@@ -19,34 +19,40 @@ async function resolve(shopId) {
   const shop = await db.shop.findUnique({
     where: { id: shopId },
     include: {
-      subscription: {
-        include: {
-          plan: {
-            include: { features: true, limits: true },
-          },
-        },
+      plan: {
+        include: { features: true },
       },
-      entitlementOverrides: true,
+      featureOverrides: true,
     },
   });
 
   if (!shop) throw new Error(`Shop ${shopId} not found`);
 
-  const plan = shop.subscription?.plan;
-  const features = new Set(plan?.features.map(f => f.featureKey) ?? []);
-  const limits = new Map(plan?.limits.map(l => [l.limitKey, l.value]) ?? []);
+  const plan = shop.plan;
+  const features = new Set();
+  const limits = new Map();
 
-  // Apply per-shop overrides
-  for (const override of shop.entitlementOverrides ?? []) {
-    if (override.featureKey) {
-      override.enabled ? features.add(override.featureKey) : features.delete(override.featureKey);
+  // Load from plan
+  for (const pf of plan?.features ?? []) {
+    if (pf.featureKey && pf.enabled) {
+      features.add(pf.featureKey);
     }
-    if (override.limitKey !== undefined) {
-      limits.set(override.limitKey, override.value);
+    if (pf.limitKey) {
+      limits.set(pf.limitKey, pf.limitValue ?? -1);
     }
   }
 
-  const result = { planId: plan?.slug ?? 'free', features, limits };
+  // Apply per-shop overrides
+  for (const override of shop.featureOverrides ?? []) {
+    if (override.featureKey) {
+      override.enabled ? features.add(override.featureKey) : features.delete(override.featureKey);
+    }
+    if (override.limitKey) {
+      limits.set(override.limitKey, override.limitValue ?? -1);
+    }
+  }
+
+  const result = { planId: shop.planId, features, limits };
   cache.set(cacheKey, result, CACHE_TTL);
   return result;
 }
@@ -60,7 +66,8 @@ async function hasFeature(shopId, featureKey) {
 }
 
 /**
- * Returns the numeric limit value for a shop, or 0 if unlimited (-1).
+ * Returns the numeric limit value for a shop.
+ * -1 = Unlimited.
  */
 async function getLimit(shopId, limitKey) {
   const { limits } = await resolve(shopId);

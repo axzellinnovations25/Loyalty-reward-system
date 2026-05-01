@@ -1,6 +1,6 @@
 'use strict';
 
-const SRI_LANKA_REGEX = /^(?:\+94|0094|0)(7[0-9]{8})$/;
+const SRI_LANKA_REGEX = /^(?:\+94|0094|0)?(7[0-9]{8})$/;
 
 /**
  * Normalises any Sri Lankan mobile number to +94XXXXXXXXX format.

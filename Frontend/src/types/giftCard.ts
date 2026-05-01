@@ -12,6 +12,7 @@ export interface GiftCard {
   createdBy: string;
   createdAt: string;
   deletedAt: string | null;
+  qrCodeImage?: string;
 }
 
 export interface CreateGiftCardRequest {

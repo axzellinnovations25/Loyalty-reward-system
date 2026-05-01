@@ -35,4 +35,16 @@ async function count(shopId) {
   return db.giftCard.count({ where: { shopId } });
 }
 
-module.exports = { findAll, findById, findByCode, create, update, count };
+async function countThisMonth(shopId) {
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+  return db.giftCard.count({
+    where: {
+      shopId,
+      createdAt: { gte: startOfMonth },
+    },
+  });
+}
+
+module.exports = { findAll, findById, findByCode, create, update, count, countThisMonth };

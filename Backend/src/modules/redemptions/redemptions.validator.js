@@ -4,7 +4,8 @@ const Joi = require('joi');
 
 const createSchema = Joi.object({
   customerId: Joi.string().required(),
-  rewardId: Joi.string().required(),
+  pointsRedeemed: Joi.number().integer().positive().required(),
+  billAmount: Joi.number().positive().required(),
   notes: Joi.string().max(500).optional().allow(''),
 });
 

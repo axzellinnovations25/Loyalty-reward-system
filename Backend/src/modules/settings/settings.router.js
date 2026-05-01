@@ -7,7 +7,8 @@ const { updateSchema, validateBody } = require('./settings.validator');
 
 router.use(authenticate);
 
-router.get('/',  controller.get);
-router.put('/',  validateBody(updateSchema), controller.update);
+router.get('/',    controller.get);
+router.put('/',    validateBody(updateSchema), controller.update);
+router.patch('/',  validateBody(updateSchema), controller.update);
 
 module.exports = router;
