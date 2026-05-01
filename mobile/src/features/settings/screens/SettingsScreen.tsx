@@ -9,6 +9,7 @@ import { Card } from '../../../components/Card';
 import { Screen } from '../../../components/Screen';
 import type { ShopSettings } from '../../../types';
 import { theme } from '../../../theme';
+import { Ionicons } from '@expo/vector-icons';
 
 export function SettingsScreen() {
   const qc = useQueryClient();
@@ -64,48 +65,71 @@ export function SettingsScreen() {
 
   return (
     <Screen scroll>
-      <View style={styles.header}>
-        <AppText variant="h2">Settings</AppText>
-        <AppText dim>Shop configuration for points and redemptions.</AppText>
-      </View>
+      {query.isLoading ? (
+        <View style={styles.loadingContainer}>
+          <Ionicons name="hourglass-outline" size={48} color={theme.colors.textLight} />
+          <AppText dim style={{ marginTop: 12 }}>Loading settings…</AppText>
+        </View>
+      ) : (
+        <>
+          {/* Points Section */}
+          <View style={styles.sectionHeader}>
+            <Ionicons name="diamond-outline" size={18} color={theme.colors.primary} />
+            <AppText variant="h3">Points Configuration</AppText>
+          </View>
+          <Card style={styles.card}>
+            <AppInput label="Spend per 1 point (LKR)" value={pointsPerAmount} onChangeText={setPointsPerAmount} keyboardType="number-pad" icon="cash-outline" />
+            <View style={{ height: theme.spacing.md }} />
+            <AppInput label="Points for Rs. 1 discount" value={redemptionValue} onChangeText={setRedemptionValue} keyboardType="number-pad" icon="swap-horizontal-outline" />
+            <View style={{ height: theme.spacing.md }} />
+            <AppInput label="Min points to redeem" value={minRedeemPoints} onChangeText={setMinRedeemPoints} keyboardType="number-pad" icon="shield-checkmark-outline" />
+          </Card>
 
-      <Card>
-        {query.isLoading ? (
-          <AppText dim>Loading…</AppText>
-        ) : (
-          <>
-            <AppInput label="Points per amount" value={pointsPerAmount} onChangeText={setPointsPerAmount} keyboardType="number-pad" />
-            <View style={{ height: theme.spacing.itemGap }} />
-            <AppInput label="Redemption value (pts for 1 LKR)" value={redemptionValue} onChangeText={setRedemptionValue} keyboardType="number-pad" />
-            <View style={{ height: theme.spacing.itemGap }} />
-            <AppInput label="Min redeem points" value={minRedeemPoints} onChangeText={setMinRedeemPoints} keyboardType="number-pad" />
-            <View style={{ height: theme.spacing.itemGap }} />
-            <AppInput label="Points expiry months (0 = never)" value={pointsExpiryMonths} onChangeText={setPointsExpiryMonths} keyboardType="number-pad" />
-            <View style={{ height: theme.spacing.itemGap }} />
-            <AppInput label="Expiry warning days" value={expiryWarningDays} onChangeText={setExpiryWarningDays} keyboardType="number-pad" />
-            <View style={{ height: theme.spacing.lg }} />
-            <AppButton
-              title="Save"
-              loading={mutation.isPending}
-              onPress={async () => {
-                try {
-                  await mutation.mutateAsync();
-                  Alert.alert('Saved', 'Settings updated.');
-                } catch (e) {
-                  Alert.alert('Error', e instanceof Error ? e.message : 'Save failed');
-                }
-              }}
-            />
-          </>
-        )}
-      </Card>
+          {/* Expiry Section */}
+          <View style={styles.sectionHeader}>
+            <Ionicons name="time-outline" size={18} color={theme.colors.warning} />
+            <AppText variant="h3">Expiry Rules</AppText>
+          </View>
+          <Card style={styles.card}>
+            <AppInput label="Points expire after (months, 0 = never)" value={pointsExpiryMonths} onChangeText={setPointsExpiryMonths} keyboardType="number-pad" icon="calendar-outline" />
+            <View style={{ height: theme.spacing.md }} />
+            <AppInput label="Warning before expiry (days)" value={expiryWarningDays} onChangeText={setExpiryWarningDays} keyboardType="number-pad" icon="notifications-outline" />
+          </Card>
+
+          <AppButton
+            title="Save Settings"
+            size="lg"
+            loading={mutation.isPending}
+            onPress={async () => {
+              try {
+                await mutation.mutateAsync();
+                Alert.alert('Saved', 'Settings updated successfully.');
+              } catch (e) {
+                Alert.alert('Error', e instanceof Error ? e.message : 'Save failed');
+              }
+            }}
+          />
+          <View style={{ height: theme.spacing.xxl }} />
+        </>
+      )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    gap: 6,
-    marginBottom: theme.spacing.lg,
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: theme.spacing.xxl,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+    marginTop: theme.spacing.md,
+  },
+  card: {
+    marginBottom: theme.spacing.md,
   },
 });

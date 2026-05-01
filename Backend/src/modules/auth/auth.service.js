@@ -21,14 +21,13 @@ async function login({ username, password }) {
   // Update last login
   await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
 
-  const token = signToken({ userId: user.id, shopId: user.shopId, role: user.role });
+  const token = signToken({ userId: user.id, shopId: user.shopId });
   return { 
     token, 
     user: { 
       id: user.id, 
       name: user.name, 
       username: user.username,
-      role: user.role, 
       shopId: user.shopId,
       forcePasswordChange: user.forcePasswordChange
     } 
@@ -60,20 +59,18 @@ async function register({ name, email, password, shopName, phone }) {
         name, 
         username: normalizedEmail,
         passwordHash, 
-        role: 'owner', 
         shopId: shop.id 
       },
     });
   });
 
-  const token = signToken({ userId: user.id, shopId: user.shopId, role: user.role });
+  const token = signToken({ userId: user.id, shopId: user.shopId });
   return { 
     token, 
     user: { 
       id: user.id, 
       name: user.name, 
       username: user.username,
-      role: user.role, 
       shopId: user.shopId,
       forcePasswordChange: user.forcePasswordChange
     } 
@@ -83,7 +80,7 @@ async function register({ name, email, password, shopName, phone }) {
 async function me(userId) {
   return db.user.findUnique({
     where: { id: userId },
-    select: { id: true, name: true, username: true, role: true, shopId: true, createdAt: true },
+    select: { id: true, name: true, username: true, shopId: true, createdAt: true },
   });
 }
 

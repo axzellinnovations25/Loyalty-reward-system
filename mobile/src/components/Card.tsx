@@ -4,7 +4,7 @@ import { theme } from '../theme';
 
 interface CardProps extends ViewProps {
   onPress?: () => void;
-  variant?: 'elevated' | 'outline' | 'flat';
+  variant?: 'elevated' | 'outline' | 'flat' | 'glass' | 'primary';
 }
 
 export function Card({ children, style, onPress, variant = 'elevated', ...props }: CardProps) {
@@ -13,9 +13,7 @@ export function Card({ children, style, onPress, variant = 'elevated', ...props 
       {...props}
       style={[
         styles.base,
-        variant === 'elevated' && styles.elevated,
-        variant === 'outline' && styles.outline,
-        variant === 'flat' && styles.flat,
+        styles[variant],
         style,
       ]}
     >
@@ -26,7 +24,13 @@ export function Card({ children, style, onPress, variant = 'elevated', ...props 
   if (!onPress) return content;
 
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => (pressed ? styles.pressed : null)}>
+    <Pressable 
+      onPress={onPress} 
+      style={({ pressed }) => [
+        { width: (style as any)?.width, flex: (style as any)?.flex },
+        pressed && styles.pressed
+      ]}
+    >
       {content}
     </Pressable>
   );
@@ -34,22 +38,36 @@ export function Card({ children, style, onPress, variant = 'elevated', ...props 
 
 const styles = StyleSheet.create({
   base: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.spacing.borderRadius.md,
-    padding: theme.spacing.md,
+    borderRadius: theme.spacing.borderRadius.lg,
+    padding: theme.spacing.lg,
+    overflow: 'hidden',
   },
   elevated: {
-    ...theme.spacing.shadows.sm,
+    backgroundColor: theme.colors.surface,
+    ...theme.spacing.shadows.md,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.02)',
   },
   outline: {
-    borderWidth: 1,
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
     borderColor: theme.colors.border,
   },
   flat: {
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.backgroundSubtle,
+  },
+  glass: {
+    backgroundColor: theme.colors.glass,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    ...theme.spacing.shadows.lg,
+  },
+  primary: {
+    backgroundColor: theme.colors.primary,
+    ...theme.spacing.shadows.lg,
   },
   pressed: {
-    opacity: 0.96,
-    transform: [{ scale: 0.995 }],
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
   },
 });

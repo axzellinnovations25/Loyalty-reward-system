@@ -52,11 +52,6 @@ export function RewardsScreen() {
 
   return (
     <Screen scroll>
-      <View style={styles.header}>
-        <AppText variant="h2">Reward tiers</AppText>
-        <AppText dim>Configure redemption tiers for customers.</AppText>
-      </View>
-
       <Card>
         <AppText variant="h3">Create tier</AppText>
         <View style={{ height: theme.spacing.sm }} />

@@ -3,10 +3,10 @@ import { useMemo } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { purchasesApi } from '../../../api/purchases';
 import { AppText } from '../../../components/AppText';
-import { Card } from '../../../components/Card';
 import { Screen } from '../../../components/Screen';
 import type { Purchase } from '../../../types';
 import { theme } from '../../../theme';
+import { Ionicons } from '@expo/vector-icons';
 
 export function PurchasesScreen() {
   const qc = useQueryClient();
@@ -31,17 +31,11 @@ export function PurchasesScreen() {
   });
 
   return (
-    <Screen scroll={false}>
-      <View style={styles.header}>
-        <AppText variant="h2">Purchases</AppText>
-        <AppText dim>Recent transactions. Long-press to void.</AppText>
-      </View>
-
-      <Card style={styles.list}>
+    <Screen padded={false} scroll={false}>
+      <View style={styles.content}>
         <FlatList
           data={items}
           keyExtractor={(p) => p.id}
-          ItemSeparatorComponent={() => <View style={styles.sep} />}
           renderItem={({ item }) => (
             <Pressable
               onLongPress={() => {
@@ -60,73 +54,105 @@ export function PurchasesScreen() {
                   },
                 ]);
               }}
-              style={styles.row}
+              style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
             >
+              <View style={styles.amountIcon}>
+                <Ionicons name="receipt-outline" size={22} color={theme.colors.primary} />
+              </View>
               <View style={{ flex: 1 }}>
-                <AppText style={styles.amount}>Rs. {Number(item.amount).toFixed(2)}</AppText>
+                <AppText style={styles.amount}>Rs. {Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</AppText>
                 <AppText dim variant="caption">
                   {new Date(item.createdAt).toLocaleString()}
                 </AppText>
               </View>
-              <AppText variant="caption" style={styles.points}>
-                +{item.pointsEarned} pts
-              </AppText>
+              <View style={styles.pointsEarned}>
+                <Ionicons name="arrow-up" size={14} color={theme.colors.success} />
+                <AppText variant="caption" style={styles.pointsText}>
+                  {item.pointsEarned} pts
+                </AppText>
+              </View>
             </Pressable>
           )}
           ListEmptyComponent={
             purchasesQuery.isLoading ? (
               <View style={styles.empty}>
-                <AppText dim>Loading…</AppText>
+                <Ionicons name="hourglass-outline" size={48} color={theme.colors.textLight} />
+                <AppText dim style={{ marginTop: 12 }}>Loading transactions…</AppText>
               </View>
             ) : (
               <View style={styles.empty}>
-                <AppText dim>No purchases yet.</AppText>
+                <Ionicons name="cart-outline" size={48} color={theme.colors.textLight} />
+                <AppText dim style={{ marginTop: 12 }}>No purchases yet</AppText>
+                <AppText dim variant="caption">Transactions will appear here</AppText>
               </View>
             )
           }
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         />
-      </Card>
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    gap: 6,
-    marginBottom: theme.spacing.lg,
-  },
-  list: {
+  content: {
     flex: 1,
-    padding: 0,
-    overflow: 'hidden',
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
+    maxWidth: theme.spacing.layout.maxContentWidth,
+    alignSelf: 'center',
+    width: '100%',
   },
   listContent: {
-    paddingVertical: 4,
+    paddingBottom: 100,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    gap: 12,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 14,
+    gap: 14,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.spacing.borderRadius.lg,
+    marginBottom: 8,
+    ...theme.spacing.shadows.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.02)',
   },
-  sep: {
-    height: 1,
-    backgroundColor: theme.colors.border,
-    marginLeft: theme.spacing.lg,
+  rowPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.99 }],
+  },
+  amountIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: theme.colors.primary + '10',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   amount: {
-    fontWeight: '800',
+    fontWeight: '700',
+    fontSize: 16,
   },
-  points: {
-    fontWeight: '800',
+  pointsEarned: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: theme.colors.success + '12',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  pointsText: {
+    fontWeight: '700',
     color: theme.colors.success,
   },
   empty: {
-    padding: theme.spacing.lg,
+    padding: theme.spacing.xxl,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
   },
 });
-

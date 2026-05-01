@@ -5,11 +5,11 @@ import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { customersApi } from '../../../api/customers';
 import { AppInput } from '../../../components/AppInput';
 import { AppText } from '../../../components/AppText';
-import { Card } from '../../../components/Card';
 import { Screen } from '../../../components/Screen';
 import type { Customer } from '../../../types';
 import type { CustomersStackParamList } from '../../../types/navigation';
 import { theme } from '../../../theme';
+import { Ionicons } from '@expo/vector-icons';
 
 type Props = NativeStackScreenProps<CustomersStackParamList, 'CustomersHome'>;
 
@@ -28,102 +28,134 @@ export function CustomersScreen({ navigation }: Props) {
   const customers = useMemo<Customer[]>(() => customersQuery.data?.items ?? [], [customersQuery.data]);
 
   return (
-    <Screen scroll={false}>
-      <View style={styles.header}>
-        <AppText variant="h2">Customers</AppText>
-        <AppText dim>Search by name or phone.</AppText>
-      </View>
+    <Screen padded={false} scroll={false}>
+      <View style={styles.content}>
+        <View style={styles.searchContainer}>
+          <AppInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search by name or phone"
+            icon="search"
+          />
+        </View>
 
-      <AppInput value={search} onChangeText={setSearch} placeholder="Search customers" />
-      <View style={{ height: theme.spacing.md }} />
-
-      <Card style={styles.list}>
         <FlatList
           data={customers}
           keyExtractor={(c) => c.id}
-          ItemSeparatorComponent={() => <View style={styles.sep} />}
           renderItem={({ item }) => (
-            <Pressable style={styles.row} onPress={() => navigation.navigate('CustomerDetail', { id: item.id })}>
-              <View style={styles.avatar}>
+            <Pressable
+              style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+              onPress={() => navigation.navigate('CustomerDetail', { id: item.id })}
+            >
+              <View style={[styles.avatar, { backgroundColor: getAvatarColor(item.name) }]}>
                 <AppText style={styles.avatarText}>{item.name?.[0]?.toUpperCase() ?? '?'}</AppText>
               </View>
               <View style={{ flex: 1 }}>
                 <AppText style={styles.name}>{item.name}</AppText>
-                <AppText dim variant="caption">
-                  {item.phone}
+                <AppText dim variant="caption">{item.phone}</AppText>
+              </View>
+              <View style={styles.pointsBadge}>
+                <Ionicons name="diamond" size={12} color={theme.colors.primary} />
+                <AppText variant="caption" style={styles.points}>
+                  {item.totalPoints?.toLocaleString?.() ?? item.totalPoints}
                 </AppText>
               </View>
-              <AppText variant="caption" style={styles.points}>
-                {item.totalPoints?.toLocaleString?.() ?? item.totalPoints} pts
-              </AppText>
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.textLight} />
             </Pressable>
           )}
           ListEmptyComponent={
             customersQuery.isLoading ? (
               <View style={styles.empty}>
-                <AppText dim>Loading…</AppText>
+                <Ionicons name="hourglass-outline" size={48} color={theme.colors.textLight} />
+                <AppText dim style={{ marginTop: 12 }}>Loading clients…</AppText>
               </View>
             ) : (
               <View style={styles.empty}>
-                <AppText dim>No customers found.</AppText>
+                <Ionicons name="people-outline" size={48} color={theme.colors.textLight} />
+                <AppText dim style={{ marginTop: 12 }}>No clients found</AppText>
+                <AppText dim variant="caption">Try a different search term</AppText>
               </View>
             )
           }
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         />
-      </Card>
+      </View>
     </Screen>
   );
 }
 
+function getAvatarColor(name: string) {
+  const colors = ['#4F46E5', '#10B981', '#F59E0B', '#3B82F6', '#EF4444', '#8B5CF6'];
+  const index = (name?.charCodeAt(0) || 0) % colors.length;
+  return colors[index] + '18';
+}
+
 const styles = StyleSheet.create({
-  header: {
-    gap: 6,
-    marginBottom: theme.spacing.lg,
-  },
-  list: {
+  content: {
     flex: 1,
-    padding: 0,
-    overflow: 'hidden',
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
+    maxWidth: theme.spacing.layout.maxContentWidth,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  searchContainer: {
+    marginBottom: theme.spacing.md,
   },
   listContent: {
-    paddingVertical: 4,
+    paddingBottom: 100,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    gap: 12,
+    paddingVertical: 14,
+    gap: 14,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.spacing.borderRadius.lg,
+    marginBottom: 8,
+    ...theme.spacing.shadows.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.02)',
   },
-  sep: {
-    height: 1,
-    backgroundColor: theme.colors.border,
-    marginLeft: theme.spacing.lg,
+  rowPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.99 }],
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.backgroundSubtle,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    width: 46,
+    height: 46,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
     fontWeight: '800',
+    fontSize: 18,
+    color: theme.colors.text,
   },
   name: {
     fontWeight: '700',
+    fontSize: 15,
+  },
+  pointsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: theme.colors.primary + '10',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
   },
   points: {
-    fontWeight: '800',
+    fontWeight: '700',
     color: theme.colors.primary,
   },
   empty: {
-    padding: theme.spacing.lg,
+    padding: theme.spacing.xxl,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
   },
 });

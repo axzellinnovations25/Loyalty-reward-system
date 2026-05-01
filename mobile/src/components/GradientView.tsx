@@ -11,7 +11,7 @@ interface GradientViewProps extends ViewProps {
 
 export function GradientView({
   children,
-  colors = theme.colors.primaryGradient,
+  colors = theme.colors.surfaceGradient,
   start = { x: 0, y: 0 },
   end = { x: 1, y: 1 },
   style,

@@ -8,6 +8,7 @@ import { Card } from '../../../components/Card';
 import { Screen } from '../../../components/Screen';
 import { useAuth } from '../../../hooks/useAuth';
 import { theme } from '../../../theme';
+import { Ionicons } from '@expo/vector-icons';
 
 export function ForceChangePasswordScreen() {
   const { clearAuth } = useAuth();
@@ -19,58 +20,57 @@ export function ForceChangePasswordScreen() {
 
   return (
     <Screen scroll contentStyle={styles.screen}>
-      <View style={styles.header}>
-        <AppText variant="h2">Update your password</AppText>
-        <AppText dim>You must change your password before continuing.</AppText>
-      </View>
-
-      <Card>
+      <Card style={styles.card}>
         <AppInput
-          label="Current password"
+          label="Current Password"
           value={currentPassword}
           onChangeText={setCurrentPassword}
           secureTextEntry
           placeholder="••••••••"
+          icon="key-outline"
         />
-        <View style={{ height: theme.spacing.itemGap }} />
+        <View style={{ height: theme.spacing.md }} />
         <AppInput
-          label="New password"
+          label="New Password"
           value={newPassword}
           onChangeText={setNewPassword}
           secureTextEntry
           placeholder="At least 8 characters"
+          icon="lock-closed-outline"
         />
-        <View style={{ height: theme.spacing.itemGap }} />
+        <View style={{ height: theme.spacing.md }} />
         <AppInput
-          label="Confirm new password"
+          label="Confirm New Password"
           value={confirm}
           onChangeText={setConfirm}
           secureTextEntry
           placeholder="Re-enter new password"
+          icon="checkmark-circle-outline"
         />
 
         {error ? (
-          <AppText variant="caption" style={styles.error}>
-            {error}
-          </AppText>
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle" size={16} color={theme.colors.error} />
+            <AppText variant="caption" style={styles.error}>{error}</AppText>
+          </View>
         ) : null}
 
-        <View style={{ height: theme.spacing.lg }} />
+        <View style={{ height: theme.spacing.xl }} />
         <AppButton
-          title="Save and continue"
+          title="Save and Continue"
+          size="lg"
           loading={loading}
           onPress={async () => {
-              setError(null);
-              setLoading(true);
-              try {
-                if (!currentPassword || !newPassword) throw new Error('Enter current and new password.');
-                if (newPassword !== confirm) throw new Error('New password and confirmation do not match.');
-                await authApi.changePassword({ oldPassword: currentPassword, newPassword });
-                // Backend should clear forcePasswordChange on next /me refresh; simplest is to sign out and sign back in.
-                await clearAuth();
-              } catch (e) {
-                setError(e instanceof Error ? e.message : 'Password update failed');
-              } finally {
+            setError(null);
+            setLoading(true);
+            try {
+              if (!currentPassword || !newPassword) throw new Error('Enter current and new password.');
+              if (newPassword !== confirm) throw new Error('New password and confirmation do not match.');
+              await authApi.changePassword({ oldPassword: currentPassword, newPassword });
+              await clearAuth();
+            } catch (e) {
+              setError(e instanceof Error ? e.message : 'Password update failed');
+            } finally {
               setLoading(false);
             }
           }}
@@ -78,7 +78,7 @@ export function ForceChangePasswordScreen() {
       </Card>
 
       <View style={styles.footer}>
-        <AppButton title="Sign out" variant="secondary" onPress={() => clearAuth()} />
+        <AppButton title="Sign Out Instead" variant="ghost" onPress={() => clearAuth()} />
       </View>
     </Screen>
   );
@@ -88,15 +88,24 @@ const styles = StyleSheet.create({
   screen: {
     justifyContent: 'center',
   },
-  header: {
+  card: {
+    ...theme.spacing.shadows.md,
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
-    marginBottom: theme.spacing.lg,
+    marginTop: theme.spacing.md,
+    padding: theme.spacing.sm,
+    backgroundColor: theme.colors.error + '08',
+    borderRadius: theme.spacing.borderRadius.md,
   },
   error: {
     color: theme.colors.error,
-    marginTop: theme.spacing.sm,
+    flex: 1,
   },
   footer: {
     marginTop: theme.spacing.lg,
+    alignItems: 'center',
   },
 });

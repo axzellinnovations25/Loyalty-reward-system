@@ -104,11 +104,6 @@ export function NewPurchaseScreen() {
 
   return (
     <Screen scroll>
-      <View style={styles.header}>
-        <AppText variant="h2">Record purchase</AppText>
-        <AppText dim>Find a customer, enter amount, optionally redeem points.</AppText>
-      </View>
-
       <Card>
         <AppInput
           label="Customer"

@@ -11,6 +11,7 @@ export type AppButtonProps = PropsWithChildren<{
   disabled?: boolean;
   loading?: boolean;
   variant?: Variant;
+  size?: 'md' | 'lg';
   style?: ViewStyle;
 }>;
 
@@ -20,6 +21,7 @@ export function AppButton({
   disabled = false,
   loading = false,
   variant = 'primary',
+  size = 'md',
   style,
 }: AppButtonProps) {
   const isDisabled = disabled || loading;
@@ -31,6 +33,7 @@ export function AppButton({
       style={({ pressed }) => [
         styles.base,
         styles[variant],
+        size === 'lg' && styles.lg,
         pressed && !isDisabled && styles.pressed,
         isDisabled && styles.disabled,
         style,
@@ -48,6 +51,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: theme.spacing.lg,
+  },
+  lg: {
+    height: 56,
+    borderRadius: theme.spacing.borderRadius.lg,
   },
   pressed: {
     transform: [{ scale: 0.99 }],

@@ -1,3 +1,7 @@
+import { Dimensions } from 'react-native';
+
+const { width, height } = Dimensions.get('window');
+
 export const spacing = {
   // Base Spacing
   none: 0,
@@ -9,10 +13,23 @@ export const spacing = {
   xxl: 48,
   
   // Layout Constants
-  containerPadding: 20,
+  containerPadding: width > 600 ? 40 : 20,
   itemGap: 12,
   screenPadding: 16,
   
+  // Responsive Helpers
+  window: {
+    width,
+    height,
+    isTablet: width > 600,
+    isSmall: width < 380,
+  },
+  
+  layout: {
+    maxContentWidth: 600,
+    cardRadius: 16,
+  },
+
   // Component Tokens
   borderRadius: {
     sm: 6,

@@ -11,6 +11,7 @@ import { Screen } from '../../../components/Screen';
 import type { Customer } from '../../../types';
 import type { CustomersStackParamList } from '../../../types/navigation';
 import { theme } from '../../../theme';
+import { Ionicons } from '@expo/vector-icons';
 
 type Props = NativeStackScreenProps<CustomersStackParamList, 'CustomerDetail'>;
 
@@ -43,29 +44,55 @@ export function CustomerDetailScreen({ route }: Props) {
 
   return (
     <Screen scroll>
-      <Card>
-        <AppText variant="h3">Profile</AppText>
-        <View style={{ height: theme.spacing.sm }} />
+      {customerQuery.isLoading ? (
+        <View style={styles.loadingContainer}>
+          <Ionicons name="hourglass-outline" size={48} color={theme.colors.textLight} />
+          <AppText dim style={{ marginTop: 12 }}>Loading profile…</AppText>
+        </View>
+      ) : customer ? (
+        <>
+          {/* Profile Header Card */}
+          <Card style={styles.profileCard}>
+            <View style={styles.profileHeader}>
+              <View style={styles.profileAvatar}>
+                <AppText style={styles.profileAvatarText}>
+                  {customer.name?.[0]?.toUpperCase() ?? '?'}
+                </AppText>
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppText variant="h2" style={{ letterSpacing: -0.3 }}>{customer.name}</AppText>
+                <AppText dim variant="caption">{customer.phone}</AppText>
+              </View>
+            </View>
+          </Card>
 
-        {customerQuery.isLoading ? (
-          <AppText dim>Loading…</AppText>
-        ) : customer ? (
-          <>
-            <AppText dim variant="caption">
-              Points balance
-            </AppText>
-            <AppText variant="h2" style={styles.points}>
-              {customer.totalPoints.toLocaleString()} pts
-            </AppText>
+          {/* Points Card */}
+          <Card variant="primary" style={styles.pointsCard}>
+            <View style={styles.pointsRow}>
+              <View style={styles.pointsIcon}>
+                <Ionicons name="diamond" size={28} color={theme.colors.white} />
+              </View>
+              <View>
+                <AppText variant="label" color="rgba(255,255,255,0.6)">Points Balance</AppText>
+                <AppText variant="h2" color={theme.colors.white}>
+                  {customer.totalPoints?.toLocaleString()} pts
+                </AppText>
+              </View>
+            </View>
+          </Card>
+
+          {/* Edit Form */}
+          <View style={styles.sectionHeader}>
+            <Ionicons name="create-outline" size={20} color={theme.colors.text} />
+            <AppText variant="h3">Edit Profile</AppText>
+          </View>
+          <Card style={styles.formCard}>
+            <AppInput label="Name" value={name} onChangeText={setName} placeholder={customer.name} icon="person-outline" />
             <View style={{ height: theme.spacing.md }} />
-
-            <AppInput label="Name" value={name} onChangeText={setName} placeholder={customer.name} />
-            <View style={{ height: theme.spacing.itemGap }} />
-            <AppInput label="Phone" value={phone} onChangeText={setPhone} placeholder={customer.phone} keyboardType="phone-pad" />
-
-            <View style={{ height: theme.spacing.lg }} />
+            <AppInput label="Phone" value={phone} onChangeText={setPhone} placeholder={customer.phone} keyboardType="phone-pad" icon="call-outline" />
+            <View style={{ height: theme.spacing.xl }} />
             <AppButton
-              title="Save changes"
+              title="Save Changes"
               loading={updateMutation.isPending}
               onPress={async () => {
                 try {
@@ -76,17 +103,69 @@ export function CustomerDetailScreen({ route }: Props) {
                 }
               }}
             />
-          </>
-        ) : (
-          <AppText dim>Customer not found.</AppText>
-        )}
-      </Card>
+          </Card>
+        </>
+      ) : (
+        <View style={styles.loadingContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color={theme.colors.textLight} />
+          <AppText dim style={{ marginTop: 12 }}>Customer not found</AppText>
+        </View>
+      )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  points: {
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: theme.spacing.xxl,
+  },
+  profileCard: {
+    marginBottom: theme.spacing.md,
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  profileAvatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 22,
+    backgroundColor: theme.colors.primary + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileAvatarText: {
+    fontWeight: '800',
+    fontSize: 26,
     color: theme.colors.primary,
+  },
+  pointsCard: {
+    marginBottom: theme.spacing.lg,
+  },
+  pointsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  pointsIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  formCard: {
+    marginBottom: theme.spacing.lg,
   },
 });

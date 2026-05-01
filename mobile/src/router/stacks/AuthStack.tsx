@@ -11,17 +11,14 @@ export function AuthStack({ initialRouteName }: { initialRouteName?: keyof AuthS
     <Stack.Navigator
       initialRouteName={initialRouteName ?? 'Login'}
       screenOptions={{
-        headerStyle: { backgroundColor: theme.colors.surface },
-        headerShadowVisible: false,
-        headerTitleStyle: { fontWeight: '700' },
+        headerShown: false,
         contentStyle: { backgroundColor: theme.colors.background },
       }}
     >
-      <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Sign in' }} />
+      <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen
         name="ForceChangePassword"
         component={ForceChangePasswordScreen}
-        options={{ title: 'Update password', headerBackVisible: false }}
       />
     </Stack.Navigator>
   );

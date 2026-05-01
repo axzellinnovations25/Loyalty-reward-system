@@ -1,39 +1,60 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { StyleSheet, View, ScrollView, TouchableOpacity } from 'react-native';
-import { reportsApi } from '../../../api/reports';
 import { AppText } from '../../../components/AppText';
 import { Card } from '../../../components/Card';
 import { Screen } from '../../../components/Screen';
 import { GradientView } from '../../../components/GradientView';
-import type { DashboardSummary } from '../../../types';
 import { theme } from '../../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../hooks/useAuth';
 
+import { useEffect } from 'react';
+import { getLocalSummary } from '../../../lib/db';
+import { syncService } from '../../../services/syncService';
+
 export function DashboardScreen() {
   const { clearAuth } = useAuth();
+  const queryClient = useQueryClient();
+  
+  // 1. Check/Trigger Sync on mount
+  useEffect(() => {
+    const runSync = async () => {
+      await syncService.checkAndSync();
+      queryClient.invalidateQueries({ queryKey: ['dashboardSummary'] });
+    };
+    runSync();
+  }, [queryClient]);
+
+  // 2. Fetch from local DB
   const summaryQuery = useQuery({
     queryKey: ['dashboardSummary'],
     queryFn: async () => {
-      const res = await reportsApi.getSummary();
-      return (res as any).data ?? res;
+      return await getLocalSummary();
     },
   });
 
-  const summary = summaryQuery.data as DashboardSummary | undefined;
+  const summary = summaryQuery.data as any;
 
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={styles.container} bounces={false}>
-        <GradientView style={styles.header}>
+        <GradientView style={styles.header} colors={theme.colors.primaryGradient}>
           <View style={styles.headerContent}>
-            <View>
-              <AppText variant="h2" color={theme.colors.white}>Store Insights</AppText>
-              <AppText color="rgba(255, 255, 255, 0.6)">Live performance metrics</AppText>
+            <View />
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity 
+                style={styles.profileButton} 
+                onPress={async () => {
+                  await syncService.checkAndSync(true);
+                  queryClient.invalidateQueries({ queryKey: ['dashboardSummary'] });
+                }}
+              >
+                <Ionicons name="refresh" size={22} color={theme.colors.white} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.profileButton} onPress={() => clearAuth()}>
+                <Ionicons name="log-out-outline" size={22} color={theme.colors.white} />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.profileButton} onPress={() => clearAuth()}>
-              <Ionicons name="log-out-outline" size={22} color={theme.colors.white} />
-            </TouchableOpacity>
           </View>
 
           <View style={styles.mainKpiContainer}>
@@ -136,8 +157,8 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   header: {
-    paddingTop: 60,
-    paddingBottom: 50,
+    paddingTop: theme.spacing.window.isTablet ? 80 : 60,
+    paddingBottom: theme.spacing.window.isTablet ? 70 : 50,
     paddingHorizontal: theme.spacing.lg,
     borderBottomLeftRadius: 40,
     borderBottomRightRadius: 40,
@@ -147,6 +168,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 30,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: theme.spacing.layout.maxContentWidth,
   },
   profileButton: {
     width: 44,
@@ -158,22 +182,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  badge: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: theme.colors.danger,
-    borderWidth: 2,
-    borderColor: theme.colors.primaryDark,
-  },
   mainKpiContainer: {
     alignItems: 'center',
+    maxWidth: theme.spacing.layout.maxContentWidth,
+    alignSelf: 'center',
+    width: '100%',
   },
   mainKpiValue: {
-    fontSize: 42,
+    fontSize: theme.spacing.window.isTablet ? 56 : 42,
     fontWeight: '800',
     color: theme.colors.white,
     marginVertical: 4,
@@ -182,26 +198,33 @@ const styles = StyleSheet.create({
   trendContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingVertical: 4,
-    paddingHorizontal: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    paddingVertical: 6,
+    paddingHorizontal: 14,
     borderRadius: 20,
+    marginTop: 8,
   },
   content: {
     paddingHorizontal: theme.spacing.lg,
     marginTop: -30,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: theme.spacing.layout.maxContentWidth,
   },
   statsGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: theme.spacing.md,
   },
   statCard: {
     flex: 1,
+    minWidth: theme.spacing.window.isSmall ? '100%' : 140,
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing.md,
     gap: theme.spacing.md,
     ...theme.spacing.shadows.md,
+    backgroundColor: theme.colors.surface,
   },
   statIcon: {
     width: 44,
@@ -224,15 +247,17 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: theme.spacing.md,
   },
   actionCard: {
-    width: '30%',
-    backgroundColor: theme.colors.white,
+    flex: 1,
+    backgroundColor: theme.colors.surface,
     padding: theme.spacing.md,
     borderRadius: 20,
     alignItems: 'center',
     ...theme.spacing.shadows.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
   },
   actionIcon: {
     width: 48,
@@ -244,6 +269,7 @@ const styles = StyleSheet.create({
   analyticsCard: {
     padding: theme.spacing.lg,
     ...theme.spacing.shadows.md,
+    backgroundColor: theme.colors.surface,
   },
   analyticsRow: {
     flexDirection: 'row',
@@ -260,15 +286,15 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.border,
   },
   progressBarBg: {
-    height: 8,
-    backgroundColor: theme.colors.background,
-    borderRadius: 4,
-    marginBottom: 8,
+    height: 10,
+    backgroundColor: theme.colors.backgroundSubtle,
+    borderRadius: 5,
+    marginBottom: 10,
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
     backgroundColor: theme.colors.primary,
-    borderRadius: 4,
+    borderRadius: 5,
   },
 });

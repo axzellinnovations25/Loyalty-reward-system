@@ -4,10 +4,10 @@ import { FlatList, StyleSheet, View } from 'react-native';
 import { usersApi } from '../../../api/users';
 import { AppInput } from '../../../components/AppInput';
 import { AppText } from '../../../components/AppText';
-import { Card } from '../../../components/Card';
 import { Screen } from '../../../components/Screen';
 import type { User } from '../../../types';
 import { theme } from '../../../theme';
+import { Ionicons } from '@expo/vector-icons';
 
 export function UsersScreen() {
   const [search, setSearch] = useState('');
@@ -29,65 +29,135 @@ export function UsersScreen() {
   }, [query.data, search]);
 
   return (
-    <Screen scroll={false}>
-      <View style={styles.header}>
-        <AppText variant="h2">Staff users</AppText>
-        <AppText dim>Search by name, username, or email.</AppText>
-      </View>
+    <Screen padded={false} scroll={false}>
+      <View style={styles.content}>
+        <View style={styles.searchContainer}>
+          <AppInput value={search} onChangeText={setSearch} placeholder="Search by name or username" icon="search" />
+        </View>
 
-      <AppInput value={search} onChangeText={setSearch} placeholder="Search users" />
-      <View style={{ height: theme.spacing.md }} />
-
-      <Card style={styles.list}>
         <FlatList
           data={items}
           keyExtractor={(u) => u.id}
-          ItemSeparatorComponent={() => <View style={styles.sep} />}
           renderItem={({ item }) => (
             <View style={styles.row}>
-              <View style={{ flex: 1 }}>
-                <AppText style={{ fontWeight: '800' }}>{item.name}</AppText>
-                <AppText dim variant="caption">
-                  {item.username} • {item.role}
-                </AppText>
+              <View style={[styles.avatar, { backgroundColor: getAvatarColor(item.name) }]}>
+                <AppText style={styles.avatarText}>{item.name?.[0]?.toUpperCase() ?? '?'}</AppText>
               </View>
-              <AppText dim variant="caption">
-                {item.isActive === false ? 'Inactive' : ''}
-              </AppText>
+              <View style={{ flex: 1 }}>
+                <AppText style={styles.name}>{item.name}</AppText>
+                <AppText dim variant="caption">{item.username}</AppText>
+              </View>
+              {item.isActive === false ? (
+                <View style={styles.inactiveBadge}>
+                  <AppText variant="caption" style={{ fontWeight: '700', color: theme.colors.danger, fontSize: 11 }}>
+                    INACTIVE
+                  </AppText>
+                </View>
+              ) : (
+                <View style={styles.activeBadge}>
+                  <View style={styles.activeDot} />
+                  <AppText variant="caption" style={{ fontWeight: '600', color: theme.colors.success, fontSize: 11 }}>
+                    Active
+                  </AppText>
+                </View>
+              )}
             </View>
           )}
-          ListEmptyComponent={query.isLoading ? <AppText dim>Loading…</AppText> : <AppText dim>No users found.</AppText>}
+          ListEmptyComponent={
+            query.isLoading ? (
+              <View style={styles.empty}>
+                <Ionicons name="hourglass-outline" size={48} color={theme.colors.textLight} />
+                <AppText dim style={{ marginTop: 12 }}>Loading staff…</AppText>
+              </View>
+            ) : (
+              <View style={styles.empty}>
+                <Ionicons name="people-outline" size={48} color={theme.colors.textLight} />
+                <AppText dim style={{ marginTop: 12 }}>No staff users found</AppText>
+              </View>
+            )
+          }
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         />
-      </Card>
+      </View>
     </Screen>
   );
 }
 
+function getAvatarColor(name: string) {
+  const colors = ['#4F46E5', '#10B981', '#F59E0B', '#3B82F6', '#EF4444', '#8B5CF6'];
+  const index = (name?.charCodeAt(0) || 0) % colors.length;
+  return colors[index] + '18';
+}
+
 const styles = StyleSheet.create({
-  header: {
-    gap: 6,
-    marginBottom: theme.spacing.lg,
-  },
-  list: {
+  content: {
     flex: 1,
-    padding: 0,
-    overflow: 'hidden',
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
+    maxWidth: theme.spacing.layout.maxContentWidth,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  searchContainer: {
+    marginBottom: theme.spacing.md,
   },
   listContent: {
-    paddingVertical: 4,
+    paddingBottom: 100,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    gap: 12,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 14,
+    gap: 14,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.spacing.borderRadius.lg,
+    marginBottom: 8,
+    ...theme.spacing.shadows.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.02)',
   },
-  sep: {
-    height: 1,
-    backgroundColor: theme.colors.border,
-    marginLeft: theme.spacing.lg,
+  avatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontWeight: '800',
+    fontSize: 18,
+    color: theme.colors.text,
+  },
+  name: {
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  activeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    backgroundColor: theme.colors.success + '12',
+  },
+  activeDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: theme.colors.success,
+  },
+  inactiveBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    backgroundColor: theme.colors.danger + '12',
+  },
+  empty: {
+    padding: theme.spacing.xxl,
+    alignItems: 'center',
+    gap: 4,
   },
 });

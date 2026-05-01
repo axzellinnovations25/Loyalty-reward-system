@@ -10,9 +10,7 @@ export function GiftCardsStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: theme.colors.surface },
-        headerShadowVisible: false,
-        headerTitleStyle: { fontWeight: '700' },
+        headerShown: false,
         contentStyle: { backgroundColor: theme.colors.background },
       }}
     >

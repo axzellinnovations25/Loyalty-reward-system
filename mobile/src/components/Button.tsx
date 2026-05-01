@@ -5,13 +5,14 @@ import {
   TouchableOpacity,
   TouchableOpacityProps,
   ActivityIndicator,
-  TextStyle,
+  View,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../theme';
 
 interface ButtonProps extends TouchableOpacityProps {
   title: string;
-  variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost' | 'glass';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
@@ -27,57 +28,79 @@ export function Button({
   disabled,
   ...props
 }: ButtonProps) {
-  const containerStyle = [
-    styles.base,
-    styles[`${variant}Container`],
-    styles[`${size}Container`],
-    (disabled || isLoading) ? styles.disabled : null,
-  ];
+  const isPrimary = variant === 'primary';
+  const isGlass = variant === 'glass';
 
-  const textStyle: TextStyle[] = [
-    styles.textBase,
-    styles[`${variant}Text`],
-    styles[`${size}Text`],
-  ];
-
-  return (
-    <TouchableOpacity
-      activeOpacity={0.8}
-      disabled={disabled || isLoading}
-      style={[containerStyle, style]}
-      {...props}
-    >
+  const Content = (
+    <View style={styles.content}>
       {isLoading ? (
         <ActivityIndicator color={variant === 'outline' || variant === 'ghost' ? theme.colors.primary : theme.colors.white} />
       ) : (
         <>
           {leftIcon}
-          <Text style={textStyle}>{title}</Text>
+          <Text style={[
+            styles.textBase,
+            styles[`${variant}Text`],
+            styles[`${size}Text`],
+          ]}>
+            {title}
+          </Text>
         </>
       )}
+    </View>
+  );
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.85}
+      disabled={disabled || isLoading}
+      style={[
+        styles.base,
+        styles[`${size}Container`],
+        !isPrimary && !isGlass && styles[`${variant}Container`],
+        (disabled || isLoading) ? styles.disabled : null,
+        style,
+      ]}
+      {...props}
+    >
+      {isPrimary ? (
+        <LinearGradient
+          colors={theme.colors.primaryGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={StyleSheet.absoluteFill}
+        />
+      ) : isGlass ? (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.glass, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }]} />
+      ) : null}
+      {Content}
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   base: {
+    borderRadius: theme.spacing.borderRadius.lg,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  content: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: theme.spacing.borderRadius.md,
+    width: '100%',
   },
   textBase: {
-    fontWeight: theme.typography.weights.semiBold,
+    fontWeight: '700',
     textAlign: 'center',
+    letterSpacing: 0.5,
   },
   disabled: {
-    opacity: 0.5,
+    opacity: 0.6,
   },
   
   // Variants
-  primaryContainer: {
-    backgroundColor: theme.colors.primary,
-  },
   primaryText: {
     color: theme.colors.white,
   },
@@ -89,7 +112,7 @@ const styles = StyleSheet.create({
   },
   outlineContainer: {
     backgroundColor: 'transparent',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: theme.colors.primary,
   },
   outlineText: {
@@ -107,12 +130,15 @@ const styles = StyleSheet.create({
   ghostText: {
     color: theme.colors.primary,
   },
+  glassText: {
+    color: theme.colors.black,
+  },
 
   // Sizes
-  smContainer: { paddingVertical: 8, paddingHorizontal: 16 },
-  smText: { fontSize: theme.typography.sizes.sm },
-  mdContainer: { paddingVertical: 12, paddingHorizontal: 20 },
-  mdText: { fontSize: theme.typography.sizes.md },
-  lgContainer: { paddingVertical: 16, paddingHorizontal: 24 },
-  lgText: { fontSize: theme.typography.sizes.lg },
+  smContainer: { height: 40, paddingHorizontal: 16 },
+  smText: { fontSize: 13 },
+  mdContainer: { height: 52, paddingHorizontal: 24 },
+  mdText: { fontSize: 15 },
+  lgContainer: { height: 60, paddingHorizontal: 32 },
+  lgText: { fontSize: 17 },
 });

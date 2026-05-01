@@ -4,7 +4,6 @@ import { Alert, StyleSheet, View } from 'react-native';
 import { giftCardsApi } from '../../../api/giftCards';
 import { AppButton } from '../../../components/AppButton';
 import { AppInput } from '../../../components/AppInput';
-import { AppText } from '../../../components/AppText';
 import { Card } from '../../../components/Card';
 import { Screen } from '../../../components/Screen';
 import { theme } from '../../../theme';
@@ -21,21 +20,24 @@ export function ScanGiftCardScreen() {
 
   return (
     <Screen scroll contentStyle={styles.screen}>
-      <View style={styles.header}>
-        <AppText variant="h2">Redeem gift card</AppText>
-        <AppText dim>Enter the code from the customer’s gift card.</AppText>
-      </View>
-
-      <Card>
-        <AppInput label="Gift card code" value={code} onChangeText={setCode} autoCapitalize="characters" placeholder="XXXX-XXXX" />
-        <View style={{ height: theme.spacing.lg }} />
+      <Card style={styles.card}>
+        <AppInput
+          label="Gift Card Code"
+          value={code}
+          onChangeText={setCode}
+          autoCapitalize="characters"
+          placeholder="XXXX-XXXX"
+          icon="card-outline"
+        />
+        <View style={{ height: theme.spacing.xl }} />
         <AppButton
-          title="Redeem"
+          title="Redeem Now"
+          size="lg"
           loading={redeemMutation.isPending}
           onPress={async () => {
             try {
               await redeemMutation.mutateAsync();
-              Alert.alert('Success', 'Gift card redeemed.');
+              Alert.alert('Success', 'Gift card redeemed successfully.');
               setCode('');
             } catch (e) {
               Alert.alert('Error', e instanceof Error ? e.message : 'Redeem failed');
@@ -51,8 +53,7 @@ const styles = StyleSheet.create({
   screen: {
     justifyContent: 'center',
   },
-  header: {
-    gap: 6,
-    marginBottom: theme.spacing.lg,
+  card: {
+    ...theme.spacing.shadows.md,
   },
 });

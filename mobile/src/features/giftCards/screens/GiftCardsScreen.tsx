@@ -1,16 +1,17 @@
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, FlatList, StyleSheet, View } from 'react-native';
 import { giftCardsApi } from '../../../api/giftCards';
 import { AppButton } from '../../../components/AppButton';
 import { AppInput } from '../../../components/AppInput';
 import { AppText } from '../../../components/AppText';
 import { Card } from '../../../components/Card';
 import { Screen } from '../../../components/Screen';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { GiftCard } from '../../../types';
 import type { GiftCardsStackParamList } from '../../../types/navigation';
 import { theme } from '../../../theme';
+import { Ionicons } from '@expo/vector-icons';
 
 type Props = NativeStackScreenProps<GiftCardsStackParamList, 'GiftCardsHome'>;
 
@@ -41,22 +42,27 @@ export function GiftCardsScreen({ navigation }: Props) {
     },
   });
 
+  const statusColor = (status: string) => {
+    if (status === 'active') return theme.colors.success;
+    if (status === 'used') return theme.colors.textMuted;
+    return theme.colors.danger;
+  };
+
   return (
     <Screen scroll>
-      <View style={styles.header}>
-        <AppText variant="h2">Gift Cards</AppText>
-        <AppText dim>Create and redeem gift cards.</AppText>
-      </View>
-
-      <Card>
-        <AppText variant="h3">Create</AppText>
-        <View style={{ height: theme.spacing.sm }} />
-        <AppInput label="Value (LKR)" value={value} onChangeText={setValue} keyboardType="decimal-pad" placeholder="0.00" />
-        <View style={{ height: theme.spacing.itemGap }} />
-        <AppInput label="Expiry date (YYYY-MM-DD)" value={expiryDate} onChangeText={setExpiryDate} placeholder="Optional" />
+      {/* Create Card */}
+      <Card style={styles.createCard}>
+        <View style={styles.sectionHeader}>
+          <Ionicons name="add-circle" size={22} color={theme.colors.primary} />
+          <AppText variant="h3">Create New</AppText>
+        </View>
         <View style={{ height: theme.spacing.md }} />
+        <AppInput label="Value (LKR)" value={value} onChangeText={setValue} keyboardType="decimal-pad" placeholder="0.00" icon="cash-outline" />
+        <View style={{ height: theme.spacing.md }} />
+        <AppInput label="Expiry (YYYY-MM-DD)" value={expiryDate} onChangeText={setExpiryDate} placeholder="Optional" icon="calendar-outline" />
+        <View style={{ height: theme.spacing.lg }} />
         <AppButton
-          title="Create gift card"
+          title="Create Gift Card"
           loading={createMutation.isPending}
           onPress={async () => {
             try {
@@ -70,54 +76,96 @@ export function GiftCardsScreen({ navigation }: Props) {
             }
           }}
         />
-        <View style={{ height: theme.spacing.md }} />
-        <AppButton title="Scan / redeem" variant="secondary" onPress={() => navigation.navigate('ScanGiftCard')} />
+        <View style={{ height: theme.spacing.sm }} />
+        <AppButton title="Scan / Redeem" variant="outline" onPress={() => navigation.navigate('ScanGiftCard')} />
       </Card>
 
-      <View style={{ height: theme.spacing.lg }} />
-      <Card style={styles.list}>
-        <AppText variant="h3">Recent</AppText>
-        <View style={{ height: theme.spacing.sm }} />
-        <FlatList
-          data={cards}
-          keyExtractor={(c) => c.id}
-          scrollEnabled={false}
-          renderItem={({ item }) => (
-            <Pressable style={styles.row}>
-              <View style={{ flex: 1 }}>
-                <AppText style={{ fontWeight: '800' }}>{item.code}</AppText>
-                <AppText dim variant="caption">
-                  {item.status.toUpperCase()} • Rs. {Number(item.value).toFixed(2)}
-                </AppText>
-              </View>
+      {/* List */}
+      <View style={styles.sectionHeader}>
+        <Ionicons name="gift" size={20} color={theme.colors.text} />
+        <AppText variant="h3">Recent Vouchers</AppText>
+      </View>
+      <FlatList
+        data={cards}
+        keyExtractor={(c) => c.id}
+        scrollEnabled={false}
+        renderItem={({ item }) => (
+          <View style={styles.row}>
+            <View style={styles.codeIcon}>
+              <Ionicons name="card-outline" size={22} color={theme.colors.info} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <AppText style={styles.code}>{item.code}</AppText>
               <AppText dim variant="caption">
-                {item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : '—'}
+                Rs. {Number(item.value).toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </AppText>
-            </Pressable>
-          )}
-          ListEmptyComponent={listQuery.isLoading ? <AppText dim>Loading…</AppText> : <AppText dim>No gift cards yet.</AppText>}
-        />
-      </Card>
+            </View>
+            <View style={[styles.statusBadge, { backgroundColor: statusColor(item.status) + '15' }]}>
+              <AppText variant="caption" style={{ fontWeight: '700', color: statusColor(item.status), fontSize: 11 }}>
+                {item.status.toUpperCase()}
+              </AppText>
+            </View>
+          </View>
+        )}
+        ListEmptyComponent={
+          listQuery.isLoading ? (
+            <View style={styles.empty}><AppText dim>Loading…</AppText></View>
+          ) : (
+            <View style={styles.empty}>
+              <Ionicons name="gift-outline" size={48} color={theme.colors.textLight} />
+              <AppText dim style={{ marginTop: 12 }}>No gift cards yet</AppText>
+            </View>
+          )
+        }
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    gap: 6,
+  createCard: {
     marginBottom: theme.spacing.lg,
   },
-  list: {
-    padding: theme.spacing.md,
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
+    marginBottom: 12,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    gap: 14,
+    paddingVertical: 14,
+    paddingHorizontal: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.spacing.borderRadius.lg,
+    marginBottom: 8,
+    ...theme.spacing.shadows.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.02)',
+  },
+  codeIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: theme.colors.info + '10',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  code: {
+    fontWeight: '700',
+    fontSize: 15,
+    letterSpacing: 1,
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  empty: {
+    padding: theme.spacing.xxl,
+    alignItems: 'center',
+    gap: 4,
   },
 });
-
