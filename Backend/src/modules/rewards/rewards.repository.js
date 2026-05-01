@@ -8,7 +8,7 @@ async function findAll(shopId, query) {
   const where = { shopId, ...(query.isActive !== undefined && { isActive: query.isActive === 'true' }) };
 
   const [items, total] = await Promise.all([
-    db.reward.findMany({ where, skip, take, orderBy: { pointsCost: 'asc' } }),
+    db.reward.findMany({ where, skip, take, orderBy: { pointsRequired: 'asc' } }),
     db.reward.count({ where }),
   ]);
 

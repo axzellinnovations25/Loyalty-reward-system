@@ -9,7 +9,8 @@ function signToken(payload) {
 }
 
 async function login({ username, password }) {
-  const user = await db.user.findUnique({ where: { username }, include: { shop: true } });
+  const identifier = String(username || '').trim().toLowerCase();
+  const user = await db.user.findUnique({ where: { username: identifier }, include: { shop: true } });
   if (!user) throw Object.assign(new Error('Invalid credentials'), { status: 401 });
 
   if (!user.isActive) throw Object.assign(new Error('Account is disabled'), { status: 403 });
@@ -20,14 +21,13 @@ async function login({ username, password }) {
   // Update last login
   await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
 
-  const token = signToken({ userId: user.id, shopId: user.shopId, role: user.role });
+  const token = signToken({ userId: user.id, shopId: user.shopId });
   return { 
     token, 
     user: { 
       id: user.id, 
       name: user.name, 
-      username: user.username, 
-      role: user.role, 
+      username: user.username,
       shopId: user.shopId,
       forcePasswordChange: user.forcePasswordChange
     } 
@@ -35,7 +35,8 @@ async function login({ username, password }) {
 }
 
 async function register({ name, email, password, shopName, phone }) {
-  const existing = await db.user.findUnique({ where: { username: email } });
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  const existing = await db.user.findUnique({ where: { username: normalizedEmail } });
   if (existing) throw Object.assign(new Error('Email already in use'), { status: 409 });
 
   const passwordHash = await bcrypt.hash(password, 12);
@@ -47,8 +48,8 @@ async function register({ name, email, password, shopName, phone }) {
     const shop = await tx.shop.create({ 
       data: { 
         name: shopName, 
-        email, 
-        phone,
+        email: normalizedEmail,
+        phone: phone || null,
         planId: basicPlan?.id || 'basic'
       } 
     });
@@ -56,22 +57,20 @@ async function register({ name, email, password, shopName, phone }) {
     return tx.user.create({
       data: { 
         name, 
-        username: email, // Owner uses email as username
+        username: normalizedEmail,
         passwordHash, 
-        role: 'owner', 
         shopId: shop.id 
       },
     });
   });
 
-  const token = signToken({ userId: user.id, shopId: user.shopId, role: user.role });
+  const token = signToken({ userId: user.id, shopId: user.shopId });
   return { 
     token, 
     user: { 
       id: user.id, 
       name: user.name, 
-      username: user.username, 
-      role: user.role, 
+      username: user.username,
       shopId: user.shopId,
       forcePasswordChange: user.forcePasswordChange
     } 
@@ -81,7 +80,7 @@ async function register({ name, email, password, shopName, phone }) {
 async function me(userId) {
   return db.user.findUnique({
     where: { id: userId },
-    select: { id: true, name: true, username: true, role: true, shopId: true, createdAt: true },
+    select: { id: true, name: true, username: true, shopId: true, createdAt: true },
   });
 }
 

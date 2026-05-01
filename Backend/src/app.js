@@ -17,6 +17,7 @@ const rewardsRouter    = require('./modules/rewards/rewards.router');
 const messagingRouter  = require('./modules/messaging/messaging.router');
 const reportsRouter    = require('./modules/reports/reports.router');
 const settingsRouter   = require('./modules/settings/settings.router');
+const productsRouter   = require('./modules/products/products.router');
 
 // Admin routers
 const adminAuthRouter    = require('./modules/admin/auth/admin.auth.router');
@@ -29,7 +30,23 @@ const app = express();
 
 // Security & parsing
 app.use(helmet());
-app.use(cors({ origin: process.env.CORS_ORIGIN || '*', credentials: true }));
+const rawCorsOrigin = process.env.CORS_ORIGIN?.trim();
+const corsOrigins =
+  rawCorsOrigin && rawCorsOrigin !== '*'
+    ? rawCorsOrigin
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : null;
+
+app.use(
+  cors({
+    // When credentials are enabled, '*' is not a valid ACAO value in browsers.
+    // `origin: true` reflects the request Origin header.
+    origin: corsOrigins ?? true,
+    credentials: true,
+  }),
+);
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined', { stream: { write: (msg) => logger.info(msg.trim()) } }));
@@ -47,6 +64,7 @@ app.use('/api/rewards',     rewardsRouter);
 app.use('/api/messaging',   messagingRouter);
 app.use('/api/reports',     reportsRouter);
 app.use('/api/settings',    settingsRouter);
+app.use('/api/products',   productsRouter);
 
 // Admin routes
 app.use('/api/admin/auth',    adminAuthRouter);
