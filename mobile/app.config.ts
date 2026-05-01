@@ -14,7 +14,11 @@ const config: ExpoConfig = {
   },
   assetBundlePatterns: ['**/*'],
   ios: { supportsTablet: true },
-  android: { adaptiveIcon: { foregroundImage: './assets/adaptive-icon.png', backgroundColor: '#ffffff' } },
+  android: ({
+    adaptiveIcon: { foregroundImage: './assets/adaptive-icon.png', backgroundColor: '#ffffff' },
+    // Allow http://192.168.x.x calls in development (Android 9+ blocks cleartext by default)
+    usesCleartextTraffic: true,
+  } as any),
   web: { favicon: './assets/favicon.png' },
   extra: {
     apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL ?? '',
@@ -22,4 +26,3 @@ const config: ExpoConfig = {
 };
 
 export default config;
-

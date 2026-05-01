@@ -9,7 +9,8 @@ function signToken(payload) {
 }
 
 async function login({ username, password }) {
-  const user = await db.user.findUnique({ where: { username }, include: { shop: true } });
+  const identifier = String(username || '').trim().toLowerCase();
+  const user = await db.user.findUnique({ where: { username: identifier }, include: { shop: true } });
   if (!user) throw Object.assign(new Error('Invalid credentials'), { status: 401 });
 
   if (!user.isActive) throw Object.assign(new Error('Account is disabled'), { status: 403 });
@@ -26,7 +27,7 @@ async function login({ username, password }) {
     user: { 
       id: user.id, 
       name: user.name, 
-      username: user.username, 
+      username: user.username,
       role: user.role, 
       shopId: user.shopId,
       forcePasswordChange: user.forcePasswordChange
@@ -35,7 +36,8 @@ async function login({ username, password }) {
 }
 
 async function register({ name, email, password, shopName, phone }) {
-  const existing = await db.user.findUnique({ where: { username: email } });
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  const existing = await db.user.findUnique({ where: { username: normalizedEmail } });
   if (existing) throw Object.assign(new Error('Email already in use'), { status: 409 });
 
   const passwordHash = await bcrypt.hash(password, 12);
@@ -47,8 +49,8 @@ async function register({ name, email, password, shopName, phone }) {
     const shop = await tx.shop.create({ 
       data: { 
         name: shopName, 
-        email, 
-        phone,
+        email: normalizedEmail,
+        phone: phone || null,
         planId: basicPlan?.id || 'basic'
       } 
     });
@@ -56,7 +58,7 @@ async function register({ name, email, password, shopName, phone }) {
     return tx.user.create({
       data: { 
         name, 
-        username: email, // Owner uses email as username
+        username: normalizedEmail,
         passwordHash, 
         role: 'owner', 
         shopId: shop.id 
@@ -70,7 +72,7 @@ async function register({ name, email, password, shopName, phone }) {
     user: { 
       id: user.id, 
       name: user.name, 
-      username: user.username, 
+      username: user.username,
       role: user.role, 
       shopId: user.shopId,
       forcePasswordChange: user.forcePasswordChange
