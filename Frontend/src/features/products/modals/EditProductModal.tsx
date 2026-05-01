@@ -103,7 +103,7 @@ export default function EditProductModal({
           </button>
         </div>
 
-        <form onSubmit={submit}>
+        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
           <div className="adm-modal-body">
             {error && (
               <div className="adm-alert adm-alert--error" role="alert">

@@ -30,7 +30,8 @@ export function MainTabs() {
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textMuted,
         tabBarStyle: {
-          backgroundColor: 'rgba(255, 255, 255, 0.98)', // Premium semi-opaque
+          display: route.name === 'PosTab' ? 'none' : 'flex',
+          backgroundColor: 'rgba(255, 255, 255, 0.98)',
           borderTopWidth: 1,
           borderTopColor: 'rgba(0,0,0,0.03)',
           height: Platform.OS === 'ios' ? 88 : 68,
