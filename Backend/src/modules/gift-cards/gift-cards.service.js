@@ -1,7 +1,9 @@
 'use strict';
 
 const crypto = require('crypto');
+const qrcode = require('qrcode');
 const repository = require('./gift-cards.repository');
+const db = require('../../config/db');
 
 function generateCode() {
   return crypto.randomBytes(4).toString('hex').toUpperCase();
@@ -17,31 +19,83 @@ async function getById(shopId, id) {
   return card;
 }
 
-async function create(shopId, data) {
-  const code = data.code || generateCode();
-  const existing = await repository.findByCode(code, shopId);
-  if (existing) throw Object.assign(new Error('Gift card code already exists'), { status: 409 });
-
-  return repository.create({
-    ...data,
+async function create(shopId, userId, data) {
+  const code = generateCode();
+  
+  const giftCard = await repository.create({
     code,
+    value: data.value,
+    expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
+    status: 'active',
     shopId,
-    balance: data.initialBalance,
-    status: 'ACTIVE',
+    createdBy: userId,
   });
+
+  // Log creation
+  await db.auditLog.create({
+    data: {
+      shopId,
+      userId,
+      action: 'gift_card_created',
+      entityType: 'GiftCard',
+      entityId: giftCard.id,
+      details: { value: data.value, code },
+    }
+  });
+
+  const qrCodeImage = await qrcode.toDataURL(code);
+  
+  return { ...giftCard, qrCodeImage };
 }
 
-async function redeem(shopId, { code, amount, customerId }) {
+async function validateCode(shopId, code) {
   const card = await repository.findByCode(code, shopId);
-  if (!card) throw Object.assign(new Error('Gift card not found'), { status: 404 });
-  if (card.status !== 'ACTIVE') throw Object.assign(new Error(`Gift card is ${card.status.toLowerCase()}`), { status: 422 });
-  if (card.balance < amount) throw Object.assign(new Error(`Insufficient balance. Available: ${card.balance}`), { status: 422 });
+  if (!card) throw Object.assign(new Error('Invalid card code'), { status: 404 });
+  
+  if (card.status === 'used') {
+    const usedByUser = card.usedBy ? await db.user.findUnique({ where: { id: card.usedBy } }) : null;
+    const staffName = usedByUser ? usedByUser.name : 'Unknown Staff';
+    const dateUsed = card.usedAt ? card.usedAt.toLocaleDateString() : 'Unknown Date';
+    throw Object.assign(new Error(`Card already redeemed on ${dateUsed} by ${staffName}`), { status: 422 });
+  }
 
-  const newBalance = card.balance - amount;
-  const status = newBalance === 0 ? 'USED' : 'ACTIVE';
+  if (card.status === 'expired' || (card.expiryDate && new Date(card.expiryDate) < new Date())) {
+    const expiry = card.expiryDate ? card.expiryDate.toLocaleDateString() : 'Unknown Date';
+    throw Object.assign(new Error(`Card expired on ${expiry}`), { status: 422 });
+  }
 
-  await repository.update(card.id, shopId, { balance: newBalance, status });
-  return repository.findById(card.id, shopId);
+  if (card.status !== 'active') {
+    throw Object.assign(new Error(`Invalid card status: ${card.status}`), { status: 422 });
+  }
+
+  return card;
 }
 
-module.exports = { list, getById, create, redeem };
+async function redeem(shopId, userId, { code }) {
+  const card = await validateCode(shopId, code);
+
+  const updatedCard = await db.giftCard.update({
+    where: { id: card.id },
+    data: {
+      status: 'used',
+      usedAt: new Date(),
+      usedBy: userId,
+    }
+  });
+
+  // Log redemption
+  await db.auditLog.create({
+    data: {
+      shopId,
+      userId,
+      action: 'gift_card_redeemed',
+      entityType: 'GiftCard',
+      entityId: card.id,
+      details: { value: card.value, code },
+    }
+  });
+
+  return updatedCard;
+}
+
+module.exports = { list, getById, create, validateCode, redeem };

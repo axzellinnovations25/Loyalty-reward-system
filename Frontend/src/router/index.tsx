@@ -15,6 +15,7 @@ import CustomerDetailPage from '../features/customers/CustomerDetailPage';
 import NewPurchasePage from '../features/purchases/NewPurchasePage';
 import PurchaseListPage from '../features/purchases/PurchaseListPage';
 import GiftCardListPage from '../features/giftCards/GiftCardListPage';
+import ScanGiftCardPage from '../features/giftCards/ScanGiftCardPage';
 import RewardsPage from '../features/rewards/RewardsPage';
 import SettingsPage from '../features/settings/SettingsPage';
 import UserListPage from '../features/users/UserListPage';
@@ -80,6 +81,7 @@ export default function AppRouter() {
                   <Route path="purchases" element={<PurchaseListPage />} />
                   <Route path="purchases/new" element={<NewPurchasePage />} />
                   <Route path="gift-cards" element={<GiftCardListPage />} />
+                  <Route path="gift-cards/scan" element={<ScanGiftCardPage />} />
                   <Route path="rewards" element={<RewardsPage />} />
                   <Route path="messages" element={<MessageLogPage />} />
                   <Route path="users" element={<UserListPage />} />

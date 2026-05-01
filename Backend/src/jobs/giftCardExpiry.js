@@ -10,8 +10,8 @@ async function run() {
   logger.info('Running giftCardExpiry job');
 
   const result = await db.giftCard.updateMany({
-    where: { expiresAt: { lte: new Date() }, status: 'ACTIVE' },
-    data: { status: 'EXPIRED' },
+    where: { expiryDate: { lte: new Date() }, status: 'active' },
+    data: { status: 'expired' },
   });
 
   logger.info('giftCardExpiry job complete', { updated: result.count });
