@@ -43,3 +43,11 @@ export type {
 } from './user';
 export type { MessageLog, MessageType, MessageChannel, MessageStatus } from './message';
 export type { DayStats, DashboardSummary, TopCustomerStats } from './reports';
+export type {
+  Product,
+  ProductCategory,
+  CreateProductRequest,
+  UpdateProductRequest,
+  CreateProductCategoryRequest,
+  UpdateProductCategoryRequest,
+} from './product';

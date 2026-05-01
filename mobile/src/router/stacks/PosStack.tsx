@@ -1,6 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { PurchasesStackParamList } from '../../types/navigation';
-import { NewPurchaseScreen } from '../../features/purchases/screens/NewPurchaseScreen';
+import { PosScreen } from '../../features/pos/screens/PosScreen';
 import { theme } from '../../theme';
 
 const Stack = createNativeStackNavigator<PurchasesStackParamList>();
@@ -13,7 +13,7 @@ export function PosStack() {
         contentStyle: { backgroundColor: theme.colors.background },
       }}
     >
-      <Stack.Screen name="NewPurchase" component={NewPurchaseScreen} options={{ title: 'Record Purchase' }} />
+      <Stack.Screen name="NewPurchase" component={PosScreen} options={{ title: 'POS' }} />
     </Stack.Navigator>
   );
 }

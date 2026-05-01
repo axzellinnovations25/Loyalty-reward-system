@@ -17,6 +17,7 @@ const rewardsRouter    = require('./modules/rewards/rewards.router');
 const messagingRouter  = require('./modules/messaging/messaging.router');
 const reportsRouter    = require('./modules/reports/reports.router');
 const settingsRouter   = require('./modules/settings/settings.router');
+const productsRouter   = require('./modules/products/products.router');
 
 // Admin routers
 const adminAuthRouter    = require('./modules/admin/auth/admin.auth.router');
@@ -63,6 +64,7 @@ app.use('/api/rewards',     rewardsRouter);
 app.use('/api/messaging',   messagingRouter);
 app.use('/api/reports',     reportsRouter);
 app.use('/api/settings',    settingsRouter);
+app.use('/api/products',   productsRouter);
 
 // Admin routes
 app.use('/api/admin/auth',    adminAuthRouter);

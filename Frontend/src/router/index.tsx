@@ -21,6 +21,9 @@ import SettingsPage from '../features/settings/SettingsPage';
 import UserListPage from '../features/users/UserListPage';
 import MessageLogPage from '../features/messages/MessageLogPage';
 import ForceChangePasswordPage from '../features/auth/ForceChangePasswordPage';
+import ProductListPage from '../features/products/ProductListPage';
+import ProductCategoriesPage from '../features/products/ProductCategoriesPage';
+import PosPage from '../features/pos/PosPage';
 
 // Admin pages
 import AdminLoginPage from '../features/admin/auth/AdminLoginPage';
@@ -85,6 +88,9 @@ export default function AppRouter() {
                   <Route path="rewards" element={<RewardsPage />} />
                   <Route path="messages" element={<MessageLogPage />} />
                   <Route path="users" element={<UserListPage />} />
+                  <Route path="products" element={<ProductListPage />} />
+                  <Route path="pos" element={<PosPage />} />
+                  <Route path="products/categories" element={<ProductCategoriesPage />} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route index element={<Navigate to="dashboard" replace />} />
                 </Routes>
