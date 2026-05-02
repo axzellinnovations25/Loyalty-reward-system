@@ -8,8 +8,12 @@
     "dev": "nodemon server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:resolve": "prisma migrate resolve",
     "prisma:seed": "node prisma/scripts/seed.js",
-    "prisma:seed-admin": "node prisma/scripts/seed-admin.js"
+    "prisma:seed-admin": "node prisma/scripts/seed-admin.js",
+    "prisma:seed-promotions": "node prisma/scripts/seed-promotions.js",
+    "test:promotions": "node src/modules/promotions/promotions.engine.test.js"
   },
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "^3.600.0",

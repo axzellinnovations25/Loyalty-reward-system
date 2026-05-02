@@ -24,6 +24,8 @@ import ForceChangePasswordPage from '../features/auth/ForceChangePasswordPage';
 import ProductListPage from '../features/products/ProductListPage';
 import ProductCategoriesPage from '../features/products/ProductCategoriesPage';
 import PosPage from '../features/pos/PosPage';
+import SalesPage from '../features/sales/SalesPage';
+import PromotionsPage from '../features/promotions/PromotionsPage';
 
 // Admin pages
 import AdminLoginPage from '../features/admin/auth/AdminLoginPage';
@@ -54,6 +56,9 @@ function RequireAdminAuth({ children }: { children: React.ReactNode }) {
 }
 
 export default function AppRouter() {
+  const { user } = useAuth();
+  const isStaff = user?.role === 'staff';
+
   return (
     <BrowserRouter>
       <Routes>
@@ -78,21 +83,34 @@ export default function AppRouter() {
             <RequireAuth>
               <ShopLayout>
                 <Routes>
-                  <Route path="dashboard" element={<DashboardPage />} />
-                  <Route path="customers" element={<CustomerListPage />} />
-                  <Route path="customers/:id" element={<CustomerDetailPage />} />
-                  <Route path="purchases" element={<PurchaseListPage />} />
-                  <Route path="purchases/new" element={<NewPurchasePage />} />
-                  <Route path="gift-cards" element={<GiftCardListPage />} />
-                  <Route path="gift-cards/scan" element={<ScanGiftCardPage />} />
-                  <Route path="rewards" element={<RewardsPage />} />
-                  <Route path="messages" element={<MessageLogPage />} />
-                  <Route path="users" element={<UserListPage />} />
-                  <Route path="products" element={<ProductListPage />} />
-                  <Route path="pos" element={<PosPage />} />
-                  <Route path="products/categories" element={<ProductCategoriesPage />} />
-                  <Route path="settings" element={<SettingsPage />} />
-                  <Route index element={<Navigate to="dashboard" replace />} />
+                  {isStaff ? (
+                    <>
+                      <Route path="pos" element={<PosPage />} />
+                      <Route path="sales" element={<SalesPage />} />
+                      <Route index element={<Navigate to="pos" replace />} />
+                      <Route path="*" element={<Navigate to="/pos" replace />} />
+                    </>
+                  ) : (
+                    <>
+                      <Route path="dashboard" element={<DashboardPage />} />
+                      <Route path="customers" element={<CustomerListPage />} />
+                      <Route path="customers/:id" element={<CustomerDetailPage />} />
+                      <Route path="purchases" element={<PurchaseListPage />} />
+                      <Route path="purchases/new" element={<NewPurchasePage />} />
+                      <Route path="gift-cards" element={<GiftCardListPage />} />
+                      <Route path="gift-cards/scan" element={<ScanGiftCardPage />} />
+                      <Route path="rewards" element={<RewardsPage />} />
+                      <Route path="messages" element={<MessageLogPage />} />
+                      <Route path="users" element={<UserListPage />} />
+                      <Route path="products" element={<ProductListPage />} />
+                      <Route path="pos" element={<PosPage />} />
+                      <Route path="products/categories" element={<ProductCategoriesPage />} />
+                      <Route path="sales" element={<SalesPage />} />
+                      <Route path="promotions" element={<PromotionsPage />} />
+                      <Route path="settings" element={<SettingsPage />} />
+                      <Route index element={<Navigate to="dashboard" replace />} />
+                    </>
+                  )}
                 </Routes>
               </ShopLayout>
             </RequireAuth>

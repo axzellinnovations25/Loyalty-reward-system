@@ -1,16 +1,26 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { NavLink, useNavigate, useSearchParams } from 'react-router-dom';
 import { productsApi } from '../../api/products';
 import { customersApi } from '../../api/customers';
 import { purchasesApi } from '../../api/purchases';
+import { promotionsApi } from '../../api/promotions';
 import type { Product, ProductCategory, Customer } from '../../types';
+import { useAuth } from '../../hooks/useAuth';
 import './pos.css';
 
 interface CartItem {
+  id: string;
   product: Product;
   quantity: number;
+  source: 'original' | 'added';
+  unitPrice: number;
 }
 
 export default function PosPage() {
+  const navigate = useNavigate();
+  const { user, clearAuth } = useAuth();
+  const isStaff = user?.role === 'staff';
+  const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,16 +29,34 @@ export default function PosPage() {
   
   // Cart State
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [couponCode, setCouponCode] = useState('');
+  const [promoPreview, setPromoPreview] = useState<any>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [managerPassword, setManagerPassword] = useState('');
+  const [showManagerPrompt, setShowManagerPrompt] = useState(false);
   
   // Customer State
   const [customerSearch, setCustomerSearch] = useState('');
   const [customerResults, setCustomerResults] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isCustomerSearching, setIsCustomerSearching] = useState(false);
+  const [newCustomerName, setNewCustomerName] = useState('');
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
+  const [createCustomerError, setCreateCustomerError] = useState<string | null>(null);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [returningPurchaseId, setReturningPurchaseId] = useState<string | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -54,6 +82,77 @@ export default function PosPage() {
     fetchData();
   }, [fetchData]);
 
+  // Load a past sale into cart for returns/edits
+  useEffect(() => {
+    const id = searchParams.get('returnPurchaseId');
+    if (!id) return;
+
+    (async () => {
+      try {
+        const res = await purchasesApi.get(id);
+        const purchase = (res as any).data ?? res;
+
+        if (purchase.isVoided) {
+          setError('This sale is already voided.');
+          return;
+        }
+
+        setReturningPurchaseId(purchase.id);
+        setSelectedCustomer(purchase.customer || null);
+
+        const items = purchase.items || [];
+        if (items.length === 0) {
+          setError('This sale has no saved line items to return.');
+          return;
+        }
+
+        setCart(
+          items.map((it: any) => {
+            const found = it.productId ? products.find((p) => p.id === it.productId) : undefined;
+            const fallback: Product = {
+              id: it.productId || `manual_${it.id}`,
+              shopId: purchase.shopId,
+              categoryId: null,
+              name: it.name,
+              sku: it.sku || 'MANUAL',
+              barcode: null,
+              description: null,
+              unit: null,
+              price: Number(it.unitPrice),
+              cost: null,
+              taxRate: null,
+              trackInventory: false,
+              stockOnHand: 0,
+              reorderLevel: 0,
+              isActive: true,
+              createdAt: purchase.createdAt,
+              updatedAt: purchase.createdAt,
+              deletedAt: null,
+              category: null,
+            };
+            return {
+              id: `orig_${it.id}`,
+              product: found || fallback,
+              quantity: Number(it.quantity),
+              source: 'original',
+              unitPrice: Number(it.unitPrice),
+            } as CartItem;
+          }),
+        );
+
+        // Clean up URL param after loading
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete('returnPurchaseId');
+          return next;
+        });
+      } catch (err: any) {
+        setError(err.message || 'Failed to load sale for return.');
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products, searchParams, setSearchParams]);
+
   // Filtered Products
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
@@ -67,20 +166,36 @@ export default function PosPage() {
   // Cart Helpers
   const addToCart = (product: Product) => {
     setCart(prev => {
-      const existing = prev.find(item => item.product.id === product.id);
-      if (existing) {
-        return prev.map(item => 
-          item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+      const existingAdded = prev.find((item) => item.product.id === product.id && item.source === 'added');
+      if (existingAdded) {
+        return prev.map((item) =>
+          item.id === existingAdded.id ? { ...item, quantity: item.quantity + 1 } : item,
         );
       }
-      return [...prev, { product, quantity: 1 }];
+
+      return [
+        ...prev,
+        {
+          id: `line_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+          product,
+          quantity: 1,
+          source: 'added',
+          unitPrice: Number(product.price),
+        },
+      ];
     });
     setSuccess(false);
   };
 
-  const updateQty = (productId: string, delta: number) => {
+  const setLinePrice = (lineId: string, price: number) => {
+    setCart((prev) =>
+      prev.map((it) => (it.id === lineId ? { ...it, unitPrice: Math.max(0, Number(price) || 0) } : it)),
+    );
+  };
+
+  const updateQty = (lineId: string, delta: number) => {
     setCart(prev => prev.map(item => {
-      if (item.product.id === productId) {
+      if (item.id === lineId) {
         const newQty = Math.max(0, item.quantity + delta);
         return { ...item, quantity: newQty };
       }
@@ -89,13 +204,48 @@ export default function PosPage() {
   };
 
   const cartTotal = useMemo(() => {
-    return cart.reduce((sum, item) => sum + (Number(item.product.price) * item.quantity), 0);
+    return cart.reduce((sum, item) => sum + (Number(item.unitPrice) * item.quantity), 0);
   }, [cart]);
+
+  const hasPriceOverrides = useMemo(() => {
+    return cart.some((it) => Math.abs(Number(it.unitPrice) - Number(it.product.price)) > 0.009);
+  }, [cart]);
+
+  // Live promo preview (debounced)
+  useEffect(() => {
+    if (cart.length === 0) {
+      setPromoPreview(null);
+      return;
+    }
+    const t = setTimeout(async () => {
+      setPromoLoading(true);
+      try {
+        const itemsPayload = cart.map((ci) => ({
+          productId: ci.product.id.startsWith('manual_') ? null : ci.product.id,
+          name: ci.product.name,
+          sku: ci.product.sku || null,
+          unitPrice: Number(ci.unitPrice),
+          quantity: ci.quantity,
+        }));
+        const res = await promotionsApi.preview({
+          couponCode: couponCode.trim() ? couponCode.trim().toUpperCase() : null,
+          items: itemsPayload,
+        } as any);
+        setPromoPreview((res as any).data ?? res);
+      } catch {
+        setPromoPreview(null);
+      } finally {
+        setPromoLoading(false);
+      }
+    }, 350);
+    return () => clearTimeout(t);
+  }, [cart, couponCode]);
 
   // Customer Search Logic
   useEffect(() => {
     if (!customerSearch || customerSearch.length < 2) {
       setCustomerResults([]);
+      setCreateCustomerError(null);
       return;
     }
     const timer = setTimeout(async () => {
@@ -113,26 +263,85 @@ export default function PosPage() {
     return () => clearTimeout(timer);
   }, [customerSearch]);
 
+  function normaliseSriLankanPhone(input: string): string | null {
+    let digits = input.replace(/\D/g, '');
+    if (digits.startsWith('0')) digits = digits.slice(1);
+    if (digits.startsWith('94')) digits = digits.slice(2);
+    if (digits.length !== 9) return null;
+    if (!digits.startsWith('7')) return null;
+    return `+94${digits}`;
+  }
+
+  const createPhone = useMemo(() => normaliseSriLankanPhone(customerSearch), [customerSearch]);
+  const showCreateCustomer =
+    !selectedCustomer &&
+    customerSearch.trim().length >= 2 &&
+    !isCustomerSearching &&
+    customerResults.length === 0;
+
+  const handleCreateCustomer = useCallback(async () => {
+    if (!createPhone) {
+      setCreateCustomerError('Enter a valid Sri Lankan mobile number (7XXXXXXXX after +94).');
+      return;
+    }
+    if (!newCustomerName.trim()) {
+      setCreateCustomerError('Enter customer name.');
+      return;
+    }
+
+    setIsCreatingCustomer(true);
+    setCreateCustomerError(null);
+    try {
+      const res = await customersApi.create({ name: newCustomerName.trim(), phone: createPhone });
+      const createdCustomer = (res as any).data ?? res;
+      setSelectedCustomer(createdCustomer);
+      setCustomerSearch('');
+      setCustomerResults([]);
+      setNewCustomerName('');
+    } catch (err: any) {
+      setCreateCustomerError(err.message || 'Failed to create customer.');
+    } finally {
+      setIsCreatingCustomer(false);
+    }
+  }, [createPhone, newCustomerName]);
+
   const handleCheckout = async () => {
     if (cart.length === 0) return;
     setIsProcessing(true);
     setError(null);
     try {
-      // Record purchase for each item? No, the current backend /purchases API takes total amount.
-      // We will summarize the cart into one purchase.
-      // If no customer selected, it might still record if the API allows it (usually requires customerId).
       if (!selectedCustomer) {
         throw new Error('Please select a customer to award points.');
+      }
+      if (hasPriceOverrides && !managerPassword.trim()) {
+        setShowManagerPrompt(true);
+        throw new Error('Manager password required for price override.');
+      }
+
+      const itemsPayload = cart.map((ci) => ({
+        productId: ci.product.id.startsWith('manual_') ? null : ci.product.id,
+        name: ci.product.name,
+        sku: ci.product.sku || null,
+        unitPrice: Number(ci.unitPrice),
+        quantity: ci.quantity,
+      }));
+
+      // Return/update flow: void old purchase first, then create a new one from edited cart.
+      if (returningPurchaseId) {
+        await purchasesApi.void(returningPurchaseId);
       }
 
       await purchasesApi.create({
         customerId: selectedCustomer.id,
-        amount: cartTotal
+        items: itemsPayload,
+        couponCode: couponCode.trim() ? couponCode.trim().toUpperCase() : null,
+        managerPassword: hasPriceOverrides ? managerPassword.trim() : null,
       });
 
       setCart([]);
       setSelectedCustomer(null);
       setCustomerSearch('');
+      setReturningPurchaseId(null);
       setSuccess(true);
       // Optional: show a receipt modal or toast
     } catch (err: any) {
@@ -144,9 +353,122 @@ export default function PosPage() {
 
   return (
     <div className="pos-page">
+      {showManagerPrompt && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18 }}>
+          <div className="adm-card" style={{ width: 'min(480px, 100%)', padding: 18 }}>
+            <div style={{ fontWeight: 900, fontSize: '1.05rem', marginBottom: 6 }}>Manager override required</div>
+            <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 12 }}>
+              One or more line items have a price override. Enter the owner password to continue.
+            </div>
+            <input
+              className="adm-input"
+              type="password"
+              value={managerPassword}
+              onChange={(e) => setManagerPassword(e.target.value)}
+              placeholder="Owner password"
+            />
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 12 }}>
+              <button className="adm-btn adm-btn--ghost" onClick={() => { setShowManagerPrompt(false); setManagerPassword(''); }}>
+                Cancel
+              </button>
+              <button className="adm-btn adm-btn--primary" onClick={() => setShowManagerPrompt(false)}>
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {isMenuOpen && (
+        <>
+          <div className="pos-menu-backdrop" onClick={() => setIsMenuOpen(false)} />
+          <aside className="pos-menu-drawer">
+            <div className="pos-menu-header">
+              <div>
+                <div className="pos-menu-title">POS Menu</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--shop-text-secondary)', fontWeight: 700 }}>Navigate without leaving full-screen</div>
+              </div>
+              <button className="pos-menu-close" onClick={() => setIsMenuOpen(false)} aria-label="Close menu" title="Close">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            <nav className="pos-menu-links" onClick={() => setIsMenuOpen(false)}>
+              {!isStaff && <NavLink className="pos-menu-link" to="/dashboard">Dashboard</NavLink>}
+              {!isStaff && <NavLink className="pos-menu-link" to="/customers">Customers</NavLink>}
+              <NavLink className="pos-menu-link" to="/sales">Sales</NavLink>
+              {!isStaff && <NavLink className="pos-menu-link" to="/gift-cards">Gift Cards</NavLink>}
+              {!isStaff && <NavLink className="pos-menu-link" to="/messages">Messages</NavLink>}
+              {!isStaff && <NavLink className="pos-menu-link" to="/rewards">Rewards</NavLink>}
+              {!isStaff && <NavLink className="pos-menu-link" to="/users">Staff</NavLink>}
+              {!isStaff && <NavLink className="pos-menu-link" to="/products">Products</NavLink>}
+              {!isStaff && <NavLink className="pos-menu-link" to="/promotions">Promotions</NavLink>}
+              {!isStaff && <NavLink className="pos-menu-link" to="/settings">Settings</NavLink>}
+            </nav>
+
+            <div className="pos-menu-exit">
+              <button
+                type="button"
+                className="pos-exit-btn"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  if (isStaff) {
+                    clearAuth();
+                  } else {
+                    navigate('/dashboard');
+                  }
+                }}
+              >
+                {isStaff ? 'Log out' : 'Exit POS (Back to Dashboard)'}
+              </button>
+            </div>
+          </aside>
+        </>
+      )}
+
       {/* Left Section: Products */}
       <section className="pos-products-section">
-        <div className="pos-search-bar">
+        {returningPurchaseId && (
+          <div className="pos-return-banner">
+            <div>
+              <div style={{ fontWeight: 900 }}>Return / Edit Sale</div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--shop-text-secondary)' }}>
+                This checkout will void the original sale and save a new one.
+              </div>
+            </div>
+            <button
+              type="button"
+              className="pos-return-cancel"
+              onClick={() => {
+                setReturningPurchaseId(null);
+                setCart([]);
+                setSelectedCustomer(null);
+                setSuccess(false);
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
+        <div className="pos-products-header">
+          <button
+            type="button"
+            className="pos-menu-btn"
+            onClick={() => setIsMenuOpen(true)}
+            aria-label="Open menu"
+            title="Menu"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+
+          <div className="pos-search-bar">
           <svg className="pos-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
@@ -156,6 +478,7 @@ export default function PosPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+        </div>
         </div>
 
         <div className="pos-categories">
@@ -261,7 +584,7 @@ export default function PosPage() {
               </svg>
               <input 
                 className="pos-customer-input"
-                placeholder="Find customer for points..."
+                placeholder="Search customer (phone/name)..."
                 value={customerSearch}
                 onChange={(e) => setCustomerSearch(e.target.value)}
               />
@@ -280,6 +603,45 @@ export default function PosPage() {
                   ))}
                 </div>
               )}
+
+              {showCreateCustomer && (
+                <div className="pos-customer-create">
+                  <div style={{ fontWeight: 800, fontSize: '0.8rem', marginBottom: 6 }}>No customer found</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--shop-text-secondary)', marginBottom: 10 }}>
+                    Create a new customer and continue checkout.
+                  </div>
+
+                  {createCustomerError && (
+                    <div style={{ color: 'var(--shop-primary)', fontSize: '0.75rem', fontWeight: 700, marginBottom: 8 }}>
+                      {createCustomerError}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <input
+                      className="pos-customer-input"
+                      style={{ paddingLeft: 12 }}
+                      placeholder="Customer name"
+                      value={newCustomerName}
+                      onChange={(e) => setNewCustomerName(e.target.value)}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <div style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--shop-text-muted)' }}>
+                      {createPhone ? createPhone : 'Phone invalid'}
+                    </div>
+                    <button
+                      type="button"
+                      className="pos-create-btn"
+                      onClick={handleCreateCustomer}
+                      disabled={isCreatingCustomer}
+                    >
+                      {isCreatingCustomer ? 'Creating…' : 'Create'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -295,28 +657,45 @@ export default function PosPage() {
             </div>
           ) : (
             cart.map(item => (
-              <div key={item.product.id} className="pos-cart-item">
-                {item.product.imageUrl ? (
-                  <img 
-                    src={item.product.imageUrl} 
-                    alt={item.product.name} 
-                    style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} 
-                  />
-                ) : (
-                  <div style={{ width: 40, height: 40, borderRadius: 6, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', flexShrink: 0 }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
-                    </svg>
-                  </div>
-                )}
+              <div key={item.id} className="pos-cart-item">
                 <div className="pos-item-info">
-                  <div className="pos-item-name">{item.product.name}</div>
-                  <div className="pos-item-price">Rs. {Number(item.product.price).toLocaleString()}</div>
+                  <div className="pos-item-name">
+                    {item.product.name}
+                    {returningPurchaseId && (
+                      <span className={`pos-line-badge ${item.source === 'original' ? 'orig' : 'added'}`}>
+                        {item.source === 'original' ? 'Original' : 'Added'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="pos-item-price">
+                    Rs. {Number(item.unitPrice).toLocaleString()}
+                    {Math.abs(Number(item.unitPrice) - Number(item.product.price)) > 0.009 ? (
+                      <span style={{ marginLeft: 8, fontSize: '0.7rem', fontWeight: 800, color: 'var(--shop-primary)' }}>
+                        OVERRIDE
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="pos-item-qty">
-                  <button className="pos-qty-btn" onClick={() => updateQty(item.product.id, -1)}>−</button>
+                  <button className="pos-qty-btn" onClick={() => updateQty(item.id, -1)}>−</button>
                   <span style={{ fontWeight: 700, minWidth: 20, textAlign: 'center' }}>{item.quantity}</span>
-                  <button className="pos-qty-btn" onClick={() => updateQty(item.product.id, 1)}>+</button>
+                  <button className="pos-qty-btn" onClick={() => updateQty(item.id, 1)}>+</button>
+                </div>
+                <div style={{ marginLeft: 10 }}>
+                  <button
+                    type="button"
+                    className="pos-qty-btn"
+                    title="Edit price"
+                    onClick={() => {
+                      const next = prompt('Unit price (Rs.)', String(item.unitPrice));
+                      if (next === null) return;
+                      const v = Number(next);
+                      if (!Number.isFinite(v) || v < 0) return alert('Invalid price');
+                      setLinePrice(item.id, v);
+                    }}
+                  >
+                    âœŽ
+                  </button>
                 </div>
               </div>
             ))
@@ -329,7 +708,16 @@ export default function PosPage() {
           
           <div className="pos-summary-row">
             <span>Subtotal</span>
-            <span>Rs. {cartTotal.toLocaleString()}</span>
+            <span>Rs. {(promoPreview?.subtotal ?? cartTotal).toLocaleString()}</span>
+          </div>
+          <div className="pos-summary-row">
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              Discount
+              {promoLoading ? <span style={{ fontSize: '0.72rem', color: 'var(--shop-text-muted)' }}>calculatingâ€¦</span> : null}
+            </span>
+            <span style={{ color: '#059669', fontWeight: 800 }}>
+              - Rs. {(promoPreview?.discountTotal ?? 0).toLocaleString()}
+            </span>
           </div>
           <div className="pos-summary-row">
             <span>Tax (0%)</span>
@@ -337,7 +725,25 @@ export default function PosPage() {
           </div>
           <div className="pos-summary-total">
             <span>Total</span>
-            <span>Rs. {cartTotal.toLocaleString()}</span>
+            <span>Rs. {(promoPreview?.total ?? cartTotal).toLocaleString()}</span>
+          </div>
+
+          <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
+            <input
+              className="pos-customer-input"
+              placeholder="Coupon code (optional)"
+              value={couponCode}
+              onChange={(e) => setCouponCode(e.target.value)}
+              style={{ flex: 1 }}
+            />
+            <button
+              type="button"
+              className="pos-create-btn"
+              disabled={promoLoading}
+              onClick={() => setCouponCode((c) => c.trim().toUpperCase())}
+            >
+              Apply
+            </button>
           </div>
           
           <button 

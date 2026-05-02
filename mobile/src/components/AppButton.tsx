@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, StyleSheet, type ViewStyle } from 'react-
 import { theme } from '../theme';
 import { AppText } from './AppText';
 
-type Variant = 'primary' | 'secondary' | 'danger';
+type Variant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline' | 'dangerSoft';
 
 export type AppButtonProps = PropsWithChildren<{
   title: string;
@@ -71,13 +71,29 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
+  ghost: {
+    backgroundColor: 'transparent',
+  },
+  outline: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
   danger: {
     backgroundColor: theme.colors.danger,
+  },
+  dangerSoft: {
+    backgroundColor: 'rgba(220, 38, 38, 0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(220, 38, 38, 0.25)',
   },
 });
 
 const stylesText: Record<Variant, { color: string; fontWeight: '600' }> = {
   primary: { color: theme.colors.white, fontWeight: '600' },
   secondary: { color: theme.colors.text, fontWeight: '600' },
+  ghost: { color: theme.colors.text, fontWeight: '600' },
+  outline: { color: theme.colors.text, fontWeight: '600' },
   danger: { color: theme.colors.white, fontWeight: '600' },
+  dangerSoft: { color: '#b91c1c', fontWeight: '600' },
 };

@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
+import { useMemo, useState, type ReactNode } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import ChangePasswordModal from '../../features/auth/ChangePasswordModal';
 import './shop-layout.css';
@@ -42,6 +42,16 @@ const NAV_ITEMS: NavItem[] = [
         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
         <line x1="3" y1="9" x2="21" y2="9"></line>
         <line x1="9" y1="21" x2="9" y2="9"></line>
+      </svg>
+    )
+  },
+  { 
+    label: 'Sales', 
+    path: '/sales', 
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 3v18h18"></path>
+        <path d="M19 9l-5 5-4-4-3 3"></path>
       </svg>
     )
   },
@@ -94,6 +104,16 @@ const NAV_ITEMS: NavItem[] = [
     )
   },
   { 
+    label: 'Promotions', 
+    path: '/promotions', 
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20.59 13.41L12 22l-8.59-8.59A2 2 0 0 1 3 12V3h9a2 2 0 0 1 1.41.59l7.18 7.18a2 2 0 0 1 0 2.64z" />
+        <line x1="7" y1="7" x2="7.01" y2="7" />
+      </svg>
+    )
+  },
+  { 
     label: 'Settings', 
     path: '/settings', 
     icon: (
@@ -112,71 +132,87 @@ interface ShopLayoutProps {
 export default function ShopLayout({ children }: ShopLayoutProps) {
   const { user, clearAuth } = useAuth();
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const location = useLocation();
+  const isPos = location.pathname.startsWith('/pos');
+  const isStaff = user?.role === 'staff';
+
+  const visibleNavItems = useMemo(() => {
+    if (!isStaff) return NAV_ITEMS;
+    return NAV_ITEMS.filter((i) => i.path === '/pos' || i.path === '/sales');
+  }, [isStaff]);
+
+  const rootClassName = useMemo(() => {
+    const classes = ['shop-layout-root'];
+    if (location.pathname.startsWith('/pos')) classes.push('pos-fullscreen');
+    return classes.join(' ');
+  }, [location.pathname]);
 
   return (
-    <div className="shop-layout-root">
+    <div className={rootClassName}>
       {/* Top Bar Navigation */}
-      <header className="shop-topbar">
-        {/* Brand */}
-        <NavLink to="/dashboard" className="shop-logo-wrap">
-          <div className="shop-logo-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
-            </svg>
-          </div>
-          <span className="shop-logo-text">LoyaltyOS</span>
-        </NavLink>
-
-        {/* Navigation Links */}
-        <nav className="shop-top-nav">
-          {NAV_ITEMS.map((item) => (
-            <NavLink 
-              key={item.path} 
-              to={item.path} 
-              className={({ isActive }) => `shop-nav-link ${isActive ? 'active' : ''}`}
-            >
-              {item.icon}
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
-        </nav>
-
-        {/* User Profile & Actions */}
-        <div className="shop-topbar-right">
-          <div className="shop-user-profile">
-            <div className="shop-user-avatar">
-              {user?.name?.[0]?.toUpperCase() || 'C'}
+      {!isPos && (
+        <header className="shop-topbar">
+          {/* Brand */}
+          <NavLink to="/dashboard" className="shop-logo-wrap">
+            <div className="shop-logo-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+              </svg>
             </div>
-            <div className="shop-user-name">{user?.name}</div>
+            <span className="shop-logo-text">LoyaltyOS</span>
+          </NavLink>
+
+          {/* Navigation Links */}
+          <nav className="shop-top-nav">
+            {visibleNavItems.map((item) => (
+              <NavLink 
+                key={item.path} 
+                to={item.path} 
+                className={({ isActive }) => `shop-nav-link ${isActive ? 'active' : ''}`}
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+          </nav>
+
+          {/* User Profile & Actions */}
+          <div className="shop-topbar-right">
+            <div className="shop-user-profile">
+              <div className="shop-user-avatar">
+                {user?.name?.[0]?.toUpperCase() || 'C'}
+              </div>
+              <div className="shop-user-name">{user?.name}</div>
+            </div>
+            
+            <div className="shop-topbar-actions">
+              <button 
+                type="button"
+                className="shop-logout-btn" 
+                onClick={() => setIsChangePasswordOpen(true)} 
+                title="Change Password"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+              </button>
+              <button 
+                type="button" 
+                className="shop-logout-btn" 
+                onClick={clearAuth} 
+                title="Log out"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+              </button>
+            </div>
           </div>
-          
-          <div className="shop-topbar-actions">
-            <button 
-              type="button"
-              className="shop-logout-btn" 
-              onClick={() => setIsChangePasswordOpen(true)} 
-              title="Change Password"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-              </svg>
-            </button>
-            <button 
-              type="button" 
-              className="shop-logout-btn" 
-              onClick={clearAuth} 
-              title="Log out"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-              </svg>
-            </button>
-          </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       {isChangePasswordOpen && user && (
         <ChangePasswordModal 

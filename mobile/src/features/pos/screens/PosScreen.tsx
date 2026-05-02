@@ -7,7 +7,9 @@ import {
   Image, 
   TextInput, 
   ScrollView,
-  Alert
+  Alert,
+  Modal,
+  Pressable
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
@@ -31,6 +33,7 @@ interface CartItem {
 export function PosScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const qc = useQueryClient();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -38,6 +41,7 @@ export function PosScreen() {
   // Customer search
   const [customerSearch, setCustomerSearch] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [newCustomerName, setNewCustomerName] = useState('');
 
   // Queries
   const productsQuery = useQuery({
@@ -66,6 +70,40 @@ export function PosScreen() {
       const payload = (res as any).data ?? res;
       return (payload.items ?? (Array.isArray(payload) ? payload : [])) as Customer[];
     },
+  });
+
+  function normaliseSriLankanPhone(input: string): string | null {
+    let digits = input.replace(/\D/g, '');
+    if (digits.startsWith('0')) digits = digits.slice(1);
+    if (digits.startsWith('94')) digits = digits.slice(2);
+    if (digits.length !== 9) return null;
+    if (!digits.startsWith('7')) return null;
+    return `+94${digits}`;
+  }
+
+  const createPhone = useMemo(() => normaliseSriLankanPhone(customerSearch), [customerSearch]);
+  const showCreateCustomer =
+    !selectedCustomer &&
+    customerSearch.length >= 2 &&
+    !customersQuery.isFetching &&
+    (customersQuery.data?.length ?? 0) === 0;
+
+  const createCustomerMutation = useMutation({
+    mutationFn: async () => {
+      const phone = createPhone;
+      if (!phone) throw new Error('Enter a valid Sri Lankan mobile number (7XXXXXXXX after +94).');
+      if (!newCustomerName.trim()) throw new Error('Enter customer name.');
+      const res = await customersApi.create({ name: newCustomerName.trim(), phone });
+      return (res as any).data ?? res;
+    },
+    onSuccess: (customer: Customer) => {
+      setSelectedCustomer(customer);
+      setCustomerSearch('');
+      setNewCustomerName('');
+    },
+    onError: (err: any) => {
+      Alert.alert('Error', err.message || 'Failed to create customer');
+    }
   });
 
   // Cart Logic
@@ -99,7 +137,16 @@ export function PosScreen() {
     mutationFn: async () => {
       if (!selectedCustomer) throw new Error('Select customer');
       if (cart.length === 0) throw new Error('Cart empty');
-      await purchasesApi.create({ customerId: selectedCustomer.id, amount: cartTotal });
+
+      const items = cart.map((ci) => ({
+        productId: ci.product.id,
+        name: ci.product.name,
+        sku: ci.product.sku || null,
+        unitPrice: Number(ci.product.price),
+        quantity: ci.quantity,
+      }));
+
+      await purchasesApi.create({ customerId: selectedCustomer.id, items });
     },
     onSuccess: () => {
       Alert.alert('Success', 'Sale completed!');
@@ -133,15 +180,78 @@ export function PosScreen() {
 
   return (
     <Screen padded={false} contentStyle={styles.container}>
+      <Modal
+        transparent
+        visible={isMenuOpen}
+        animationType="fade"
+        onRequestClose={() => setIsMenuOpen(false)}
+      >
+        <Pressable style={styles.menuBackdrop} onPress={() => setIsMenuOpen(false)} />
+        <View style={styles.menuDrawer}>
+          <View style={styles.menuHeader}>
+            <View>
+              <AppText style={styles.menuTitle}>POS Menu</AppText>
+              <AppText variant="caption" dim>Navigate without leaving POS</AppText>
+            </View>
+            <TouchableOpacity style={styles.menuClose} onPress={() => setIsMenuOpen(false)}>
+              <Ionicons name="close" size={18} color={theme.colors.text} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.menuLinks}>
+            <TouchableOpacity onPress={() => { setIsMenuOpen(false); navigation.navigate('Main', { screen: 'DashboardTab' } as any); }} style={styles.menuLink}>
+              <AppText style={styles.menuLinkText}>Dashboard</AppText>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => { setIsMenuOpen(false); navigation.navigate('Main', { screen: 'CustomersTab' } as any); }} style={styles.menuLink}>
+              <AppText style={styles.menuLinkText}>Customers</AppText>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => { setIsMenuOpen(false); navigation.navigate('Main', { screen: 'MoreTab', params: { screen: 'Purchases' } } as any); }} style={styles.menuLink}>
+              <AppText style={styles.menuLinkText}>Sales</AppText>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => { setIsMenuOpen(false); navigation.navigate('Main', { screen: 'GiftCardsTab' } as any); }} style={styles.menuLink}>
+              <AppText style={styles.menuLinkText}>Gift Cards</AppText>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => { setIsMenuOpen(false); navigation.navigate('Main', { screen: 'MoreTab', params: { screen: 'Messages' } } as any); }} style={styles.menuLink}>
+              <AppText style={styles.menuLinkText}>Messages</AppText>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => { setIsMenuOpen(false); navigation.navigate('Main', { screen: 'MoreTab', params: { screen: 'Rewards' } } as any); }} style={styles.menuLink}>
+              <AppText style={styles.menuLinkText}>Rewards</AppText>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => { setIsMenuOpen(false); navigation.navigate('Main', { screen: 'MoreTab', params: { screen: 'Users' } } as any); }} style={styles.menuLink}>
+              <AppText style={styles.menuLinkText}>Staff</AppText>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => { setIsMenuOpen(false); navigation.navigate('Main', { screen: 'PosTab' } as any); }} style={styles.menuLink}>
+              <AppText style={styles.menuLinkText}>Products</AppText>
+              <AppText variant="caption" dim>(POS)</AppText>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => { setIsMenuOpen(false); navigation.navigate('Main', { screen: 'MoreTab', params: { screen: 'Settings' } } as any); }} style={styles.menuLink}>
+              <AppText style={styles.menuLinkText}>Settings</AppText>
+            </TouchableOpacity>
+          </ScrollView>
+
+          <View style={styles.menuExit}>
+            <AppButton
+              title="Exit POS (Back to Dashboard)"
+              onPress={() => {
+                setIsMenuOpen(false);
+                navigation.navigate('Main', { screen: 'DashboardTab' } as any);
+              }}
+              variant="dangerSoft"
+              style={{ height: 44 }}
+            />
+          </View>
+        </View>
+      </Modal>
+
       {/* Left: Products */}
       <View style={styles.leftPane}>
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 10 }}>
             <TouchableOpacity 
-              onPress={() => navigation.navigate('Main', { screen: 'DashboardTab' } as any)}
-              style={styles.homeBtn}
+              onPress={() => setIsMenuOpen(true)}
+              style={styles.menuBtn}
             >
-              <Ionicons name="grid" size={20} color={theme.colors.primary} />
+              <Ionicons name="menu" size={20} color={theme.colors.primary} />
             </TouchableOpacity>
             <View style={styles.searchBar}>
               <Ionicons name="search-outline" size={18} color={theme.colors.textMuted} />
@@ -230,6 +340,33 @@ export function PosScreen() {
                   ))}
                 </View>
               )}
+
+              {showCreateCustomer && (
+                <View style={styles.customerCreateBox}>
+                  <AppText style={{ fontSize: 12, fontWeight: '800' }}>No customer found</AppText>
+                  <AppText variant="caption" dim>Create customer and continue</AppText>
+                  <TextInput
+                    style={[styles.customerInput, { marginTop: 8 }]}
+                    placeholder="Customer name"
+                    value={newCustomerName}
+                    onChangeText={setNewCustomerName}
+                  />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 8 }}>
+                    <AppText variant="caption" dim style={{ flex: 1, fontFamily: 'monospace' }}>
+                      {createPhone ? createPhone : 'Phone invalid'}
+                    </AppText>
+                    <TouchableOpacity
+                      style={styles.createBtn}
+                      disabled={createCustomerMutation.isPending}
+                      onPress={() => createCustomerMutation.mutate()}
+                    >
+                      <AppText style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>
+                        {createCustomerMutation.isPending ? 'Creating…' : 'Create'}
+                      </AppText>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
             </View>
           )}
         </View>
@@ -293,7 +430,7 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: '#fff',
   },
-  homeBtn: {
+  menuBtn: {
     width: 36,
     height: 36,
     borderRadius: 8,
@@ -302,6 +439,71 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: theme.colors.border,
+  },
+  menuBackdrop: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: 'rgba(15,23,42,0.35)',
+  },
+  menuDrawer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    height: '100%',
+    width: 290,
+    backgroundColor: '#fff',
+    borderRightWidth: 1,
+    borderRightColor: theme.colors.border,
+    ...theme.spacing.shadows.lg,
+  },
+  menuHeader: {
+    padding: 14,
+    paddingTop: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  menuTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  menuClose: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  menuLinks: {
+    padding: 10,
+    gap: 6,
+  },
+  menuLink: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: theme.colors.backgroundSubtle,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  menuLinkText: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  menuExit: {
+    padding: 12,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
   },
   searchBar: {
     flex: 1,
@@ -434,6 +636,23 @@ const styles = StyleSheet.create({
     padding: 10,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
+  },
+  customerCreateBox: {
+    marginTop: 8,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: theme.colors.border,
+    backgroundColor: '#fff',
+  },
+  createBtn: {
+    paddingHorizontal: 12,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cartItem: {
     flexDirection: 'row',

@@ -11,6 +11,16 @@ export type Purchase = {
   voidedBy: string | null;
   voidedAt: string | null;
   createdAt: string;
+  items?: Array<{
+    id: string;
+    purchaseId: string;
+    productId?: string | null;
+    name: string;
+    sku?: string | null;
+    unitPrice: string;
+    quantity: number;
+    lineTotal: string;
+  }>;
   customer?: {
     id: string;
     name: string;
@@ -20,5 +30,12 @@ export type Purchase = {
 
 export type CreatePurchaseRequest = {
   customerId: string;
-  amount: number;
+  amount?: number;
+  items?: Array<{
+    productId?: string | null;
+    name: string;
+    sku?: string | null;
+    unitPrice: number;
+    quantity: number;
+  }>;
 };

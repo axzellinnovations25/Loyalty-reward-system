@@ -3,6 +3,7 @@ export interface User {
   shopId: string;
   name: string;
   username: string;
+  role?: 'owner' | 'staff';
   isActive: boolean;
   forcePasswordChange: boolean;
   lastLoginAt: string | null;
@@ -13,7 +14,6 @@ export interface CreateUserRequest {
   name: string;
   username: string;
   password: string;
-  shopId: string;
 }
 
 export interface UpdateUserRequest {

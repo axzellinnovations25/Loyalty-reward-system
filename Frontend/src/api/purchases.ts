@@ -13,6 +13,7 @@ interface ListPurchasesParams extends PaginationParams {
 export const purchasesApi = {
   list: (params?: ListPurchasesParams) =>
     api.get<PaginatedResponse<Purchase>>('/purchases', params as Record<string, unknown>),
+  get: (id: string) => api.get<Purchase>(`/purchases/${id}`),
   create: (data: CreatePurchaseRequest) => api.post<Purchase>('/purchases', data),
   void: (id: string) => api.post<Purchase>(`/purchases/${id}/void`, {}),
 };

@@ -18,6 +18,8 @@ const messagingRouter  = require('./modules/messaging/messaging.router');
 const reportsRouter    = require('./modules/reports/reports.router');
 const settingsRouter   = require('./modules/settings/settings.router');
 const productsRouter   = require('./modules/products/products.router');
+const usersRouter      = require('./modules/users/users.router');
+const promotionsRouter = require('./modules/promotions/promotions.router');
 
 // Admin routers
 const adminAuthRouter    = require('./modules/admin/auth/admin.auth.router');
@@ -65,6 +67,8 @@ app.use('/api/messaging',   messagingRouter);
 app.use('/api/reports',     reportsRouter);
 app.use('/api/settings',    settingsRouter);
 app.use('/api/products',   productsRouter);
+app.use('/api/users',      usersRouter);
+app.use('/api/promotions', promotionsRouter);
 
 // Admin routes
 app.use('/api/admin/auth',    adminAuthRouter);

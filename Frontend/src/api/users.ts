@@ -7,10 +7,10 @@ import type {
 } from '../types';
 
 export const usersApi = {
-  list: () => api.get<User[]>('/users'),
-  create: (data: CreateUserRequest) => api.post<User>('/users', data),
+  list: () => api.get<{ success: boolean; data: User[] } | User[]>('/users'),
+  create: (data: CreateUserRequest) => api.post<{ success: boolean; data: User } | User>('/users', data),
   update: (id: string, data: UpdateUserRequest) =>
-    api.patch<User>(`/users/${id}`, data),
+    api.patch<{ success: boolean; data: User } | User>(`/users/${id}`, data),
   resetPassword: (id: string, data: ResetUserPasswordRequest) =>
     api.post<void>(`/users/${id}/reset-password`, data),
   delete: (id: string) => api.delete<void>(`/users/${id}`),

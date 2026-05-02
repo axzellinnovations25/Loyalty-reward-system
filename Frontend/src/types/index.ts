@@ -51,3 +51,5 @@ export type {
   CreateProductCategoryRequest,
   UpdateProductCategoryRequest,
 } from './product';
+
+export type { Promotion, PromotionKind, PromotionPreviewRequest, PromotionPreviewResult } from './promotion';

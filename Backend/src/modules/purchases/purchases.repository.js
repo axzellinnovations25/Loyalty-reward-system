@@ -13,7 +13,9 @@ async function findAll(shopId, query) {
       skip,
       take,
       orderBy: { createdAt: 'desc' },
-      include: { customer: { select: { id: true, name: true, phone: true } } },
+      include: {
+        customer: { select: { id: true, name: true, phone: true } },
+      },
     }),
     db.purchase.count({ where }),
   ]);
@@ -41,11 +43,32 @@ async function findAll(shopId, query) {
 }
 
 async function findById(id, shopId) {
-  return db.purchase.findFirst({ where: { id, shopId }, include: { customer: true } });
+  try {
+    return await db.purchase.findFirst({
+      where: { id, shopId },
+      include: { customer: true, items: true, promotions: true },
+    });
+  } catch (e) {
+    // If the DB hasn't applied the PurchaseItem migration yet, Prisma can throw P2021 (table does not exist).
+    // If Prisma Client wasn't regenerated after adding the relation, it can throw a validation error.
+    // Degrade gracefully so other flows keep working; returns will show "no line items" on the frontend.
+    const isMissingTable = e?.code === 'P2021';
+    const isMissingRelation =
+      e?.name === 'PrismaClientValidationError' &&
+      typeof e?.message === 'string' &&
+      e.message.toLowerCase().includes('unknown field') &&
+      (e.message.toLowerCase().includes('items') || e.message.toLowerCase().includes('promotions'));
+
+    if (isMissingTable || isMissingRelation) {
+      const purchase = await db.purchase.findFirst({ where: { id, shopId }, include: { customer: true } });
+      return purchase ? { ...purchase, items: [], promotions: [] } : null;
+    }
+    throw e;
+  }
 }
 
 async function create(data) {
-  return db.purchase.create({ data, include: { customer: true } });
+  return db.purchase.create({ data, include: { customer: true, items: true } });
 }
 
 module.exports = { findAll, findById, create };

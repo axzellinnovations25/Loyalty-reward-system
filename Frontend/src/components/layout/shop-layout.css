@@ -29,11 +29,12 @@
 
 body .shop-layout-root {
   background-color: var(--shop-bg);
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   font-family: 'Inter', system-ui, sans-serif;
   color: var(--shop-text-primary);
+  overflow: hidden;
 }
 
 /* ── Top Bar ────────────────────────────────────────────────── */
@@ -191,6 +192,7 @@ body .shop-layout-root {
   flex: 1;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .shop-page-wrapper {
@@ -199,16 +201,18 @@ body .shop-layout-root {
   width: 100%;
   box-sizing: border-box;
   margin: 0 auto;
+  overflow: auto;
 }
 
 /* Edge-to-edge for specific full-width pages like POS */
-.shop-layout-root:has(.pos-page) .shop-page-wrapper {
+.shop-layout-root.pos-fullscreen .shop-page-wrapper {
   padding: 0;
   max-width: none;
 }
 
-.shop-layout-root:not(:has(.pos-page)) .shop-page-wrapper {
-  max-width: 1400px;
+.shop-layout-root.pos-fullscreen .shop-main {
+  height: 100vh;
+  width: 100vw;
 }
 
 /* ── Utility ─────────────────────────────────────────────── */

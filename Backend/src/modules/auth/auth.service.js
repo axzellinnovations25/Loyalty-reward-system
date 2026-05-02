@@ -15,11 +15,16 @@ async function login({ username, password }) {
 
   if (!user.isActive) throw Object.assign(new Error('Account is disabled'), { status: 403 });
 
-  const valid = await bcrypt.compare(password, user.passwordHash);
+  const passwordValue = String(password ?? '');
+  // Trim accidental leading/trailing whitespace (common from copy/paste on mobile).
+  const valid = await bcrypt.compare(passwordValue.trim(), user.passwordHash);
   if (!valid) throw Object.assign(new Error('Invalid credentials'), { status: 401 });
 
   // Update last login
   await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+
+  const owner = await db.user.findFirst({ where: { shopId: user.shopId }, orderBy: { createdAt: 'asc' } });
+  const role = owner && owner.id === user.id ? 'owner' : 'staff';
 
   const token = signToken({ userId: user.id, shopId: user.shopId });
   return { 
@@ -29,6 +34,7 @@ async function login({ username, password }) {
       name: user.name, 
       username: user.username,
       shopId: user.shopId,
+      role,
       forcePasswordChange: user.forcePasswordChange
     } 
   };
@@ -39,7 +45,8 @@ async function register({ name, email, password, shopName, phone }) {
   const existing = await db.user.findUnique({ where: { username: normalizedEmail } });
   if (existing) throw Object.assign(new Error('Email already in use'), { status: 409 });
 
-  const passwordHash = await bcrypt.hash(password, 12);
+  const passwordValue = String(password ?? '').trim();
+  const passwordHash = await bcrypt.hash(passwordValue, 12);
 
   // We find 'basic' as default plan instead of 'free' since schema uses basic/standard/pro/enterprise
   const basicPlan = await db.plan.findUnique({ where: { id: 'basic' } });
@@ -64,6 +71,7 @@ async function register({ name, email, password, shopName, phone }) {
     });
   });
 
+  const role = 'owner';
   const token = signToken({ userId: user.id, shopId: user.shopId });
   return { 
     token, 
@@ -72,6 +80,7 @@ async function register({ name, email, password, shopName, phone }) {
       name: user.name, 
       username: user.username,
       shopId: user.shopId,
+      role,
       forcePasswordChange: user.forcePasswordChange
     } 
   };
@@ -88,10 +97,12 @@ async function changePassword(userId, { oldPassword, newPassword }) {
   const user = await db.user.findUnique({ where: { id: userId } });
   if (!user) throw Object.assign(new Error('User not found'), { status: 404 });
 
-  const valid = await bcrypt.compare(oldPassword, user.passwordHash);
+  const oldPasswordValue = String(oldPassword ?? '').trim();
+  const valid = await bcrypt.compare(oldPasswordValue, user.passwordHash);
   if (!valid) throw Object.assign(new Error('Invalid old password'), { status: 400 });
 
-  const passwordHash = await bcrypt.hash(newPassword, 12);
+  const newPasswordValue = String(newPassword ?? '').trim();
+  const passwordHash = await bcrypt.hash(newPasswordValue, 12);
   
   await db.user.update({
     where: { id: userId },
