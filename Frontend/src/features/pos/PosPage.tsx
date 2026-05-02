@@ -1,10 +1,12 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { NavLink, useNavigate, useSearchParams } from 'react-router-dom';
 import { productsApi } from '../../api/products';
 import { customersApi } from '../../api/customers';
 import { purchasesApi } from '../../api/purchases';
 import { promotionsApi } from '../../api/promotions';
+import { posApi } from '../../api/pos';
 import type { Product, ProductCategory, Customer } from '../../types';
+import type { HeldOrder, RegisterShift } from '../../types/pos';
 import { useAuth } from '../../hooks/useAuth';
 import './pos.css';
 
@@ -14,6 +16,27 @@ interface CartItem {
   quantity: number;
   source: 'original' | 'added';
   unitPrice: number;
+}
+
+interface ReceiptSnapshot {
+  id: string;
+  createdAt: string;
+  customerName: string;
+  customerPhone: string;
+  items: CartItem[];
+  subtotal: number;
+  discount: number;
+  tax: number;
+  total: number;
+  paymentMethod: string;
+  paid: number;
+  change: number;
+}
+
+const OFFLINE_QUEUE_KEY = 'pos_offline_sales_queue';
+
+function toMoney(v: number): string {
+  return `Rs. ${Number(v || 0).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export default function PosPage() {
@@ -34,6 +57,13 @@ export default function PosPage() {
   const [promoLoading, setPromoLoading] = useState(false);
   const [managerPassword, setManagerPassword] = useState('');
   const [showManagerPrompt, setShowManagerPrompt] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'gift_card' | 'split'>('cash');
+  const [cashReceived, setCashReceived] = useState('');
+  const [cardReference, setCardReference] = useState('');
+  const [receipt, setReceipt] = useState<ReceiptSnapshot | null>(null);
+  const [currentShift, setCurrentShift] = useState<RegisterShift | null>(null);
+  const [heldOrders, setHeldOrders] = useState<HeldOrder[]>([]);
+  const [offlineQueued, setOfflineQueued] = useState(0);
   
   // Customer State
   const [customerSearch, setCustomerSearch] = useState('');
@@ -81,6 +111,27 @@ export default function PosPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const refreshHeldOrders = useCallback(async () => {
+    try {
+      const res = await posApi.heldOrders({ status: 'parked' });
+      setHeldOrders(((res as any).data ?? res) as HeldOrder[]);
+    } catch {
+      setHeldOrders([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    posApi.currentShift()
+      .then((res) => setCurrentShift(((res as any).data ?? res) as RegisterShift | null))
+      .catch(() => setCurrentShift(null));
+    refreshHeldOrders();
+    try {
+      setOfflineQueued(JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]').length);
+    } catch {
+      setOfflineQueued(0);
+    }
+  }, [refreshHeldOrders]);
 
   // Load a past sale into cart for returns/edits
   useEffect(() => {
@@ -207,6 +258,23 @@ export default function PosPage() {
     return cart.reduce((sum, item) => sum + (Number(item.unitPrice) * item.quantity), 0);
   }, [cart]);
 
+  const discountTotal = useMemo(() => Number(promoPreview?.discountTotal ?? 0), [promoPreview]);
+  const netTotal = useMemo(() => Number(promoPreview?.total ?? cartTotal), [cartTotal, promoPreview]);
+  const taxTotal = useMemo(() => {
+    const subtotal = cart.reduce((sum, item) => {
+      const rate = Number(item.product.taxRate || 0);
+      if (!Number.isFinite(rate) || rate <= 0) return sum;
+      return sum + (Number(item.unitPrice) * item.quantity * rate) / 100;
+    }, 0);
+    return Math.max(0, subtotal);
+  }, [cart]);
+  const payableTotal = useMemo(() => netTotal + taxTotal, [netTotal, taxTotal]);
+  const paidAmount = useMemo(() => {
+    if (paymentMethod === 'cash' || paymentMethod === 'split') return Number(cashReceived || 0);
+    return payableTotal;
+  }, [cashReceived, payableTotal, paymentMethod]);
+  const changeDue = useMemo(() => Math.max(0, paidAmount - payableTotal), [paidAmount, payableTotal]);
+
   const hasPriceOverrides = useMemo(() => {
     return cart.some((it) => Math.abs(Number(it.unitPrice) - Number(it.product.price)) > 0.009);
   }, [cart]);
@@ -226,6 +294,8 @@ export default function PosPage() {
           sku: ci.product.sku || null,
           unitPrice: Number(ci.unitPrice),
           quantity: ci.quantity,
+          taxRate: Number(ci.product.taxRate || 0),
+          taxMode: (ci.product as any).taxMode || 'exclusive',
         }));
         const res = await promotionsApi.preview({
           couponCode: couponCode.trim() ? couponCode.trim().toUpperCase() : null,
@@ -317,6 +387,9 @@ export default function PosPage() {
         setShowManagerPrompt(true);
         throw new Error('Manager password required for price override.');
       }
+      if ((paymentMethod === 'cash' || paymentMethod === 'split') && paidAmount < payableTotal) {
+        throw new Error('Cash received is less than the total due.');
+      }
 
       const itemsPayload = cart.map((ci) => ({
         productId: ci.product.id.startsWith('manual_') ? null : ci.product.id,
@@ -331,23 +404,146 @@ export default function PosPage() {
         await purchasesApi.void(returningPurchaseId);
       }
 
-      await purchasesApi.create({
+      const payload = {
         customerId: selectedCustomer.id,
         items: itemsPayload,
         couponCode: couponCode.trim() ? couponCode.trim().toUpperCase() : null,
         managerPassword: hasPriceOverrides ? managerPassword.trim() : null,
+        paymentMethod,
+        paidAmount,
+        shiftId: currentShift?.id || null,
+        payments: [{
+          tenderType: paymentMethod,
+          amount: paidAmount,
+          reference: cardReference.trim() || null,
+          status: 'captured',
+        }],
+        createKitchenTicket: true,
+      };
+
+      const created = await purchasesApi.create(payload);
+      const savedPurchase = (created as any).data ?? created;
+
+      setReceipt({
+        id: savedPurchase?.id || `receipt_${Date.now()}`,
+        createdAt: savedPurchase?.createdAt || new Date().toISOString(),
+        customerName: selectedCustomer.name,
+        customerPhone: selectedCustomer.phone,
+        items: cart,
+        subtotal: cartTotal,
+        discount: discountTotal,
+        tax: taxTotal,
+        total: payableTotal,
+        paymentMethod,
+        paid: paidAmount,
+        change: changeDue,
       });
 
       setCart([]);
       setSelectedCustomer(null);
       setCustomerSearch('');
       setReturningPurchaseId(null);
+      setCouponCode('');
+      setCashReceived('');
+      setCardReference('');
       setSuccess(true);
-      // Optional: show a receipt modal or toast
     } catch (err: any) {
+      const isNetworkError = /failed to fetch|network|load failed/i.test(String(err?.message || ''));
+      if (isNetworkError && selectedCustomer) {
+        const queue = JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]');
+        queue.push({
+          id: `offline_${Date.now()}`,
+          createdAt: new Date().toISOString(),
+          customerId: selectedCustomer.id,
+          items: cart.map((ci) => ({
+            productId: ci.product.id.startsWith('manual_') ? null : ci.product.id,
+            name: ci.product.name,
+            sku: ci.product.sku || null,
+            unitPrice: Number(ci.unitPrice),
+            quantity: ci.quantity,
+            taxRate: Number(ci.product.taxRate || 0),
+            taxMode: (ci.product as any).taxMode || 'exclusive',
+          })),
+          couponCode: couponCode.trim() ? couponCode.trim().toUpperCase() : null,
+          paymentMethod,
+          paidAmount,
+        });
+        localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+        setOfflineQueued(queue.length);
+        setCart([]);
+        setSelectedCustomer(null);
+        setError('Network unavailable. Sale saved to offline queue for sync.');
+        return;
+      }
       setError(err.message || 'Checkout failed.');
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const holdCurrentOrder = async () => {
+    if (cart.length === 0) return;
+    try {
+      await posApi.createHeldOrder({
+        customerId: selectedCustomer?.id || null,
+        status: 'parked',
+        label: selectedCustomer?.name || `Order ${new Date().toLocaleTimeString()}`,
+        subtotal: cartTotal,
+        cart: { cart, couponCode, customer: selectedCustomer },
+      });
+      setCart([]);
+      setSelectedCustomer(null);
+      setCouponCode('');
+      refreshHeldOrders();
+    } catch (err: any) {
+      setError(err.message || 'Failed to hold order.');
+    }
+  };
+
+  const resumeHeldOrder = async (order: HeldOrder) => {
+    const payload = order.cart as any;
+    setCart(payload.cart || []);
+    setCouponCode(payload.couponCode || '');
+    setSelectedCustomer(payload.customer || null);
+    await posApi.updateHeldOrder(order.id, { status: 'converted' } as any);
+    refreshHeldOrders();
+  };
+
+  const syncOfflineQueue = async () => {
+    const queue = JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]');
+    const remaining = [];
+    for (const sale of queue) {
+      try {
+        await purchasesApi.create({ ...sale, shiftId: currentShift?.id || null });
+      } catch {
+        remaining.push(sale);
+      }
+    }
+    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(remaining));
+    setOfflineQueued(remaining.length);
+    setError(remaining.length ? `${remaining.length} offline sale(s) still could not sync.` : null);
+  };
+
+  const handleProductSearchKeyDown = async (e: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return;
+    const query = search.trim();
+    if (!query) return;
+    const exact = products.find((p) => p.barcode === query || p.sku.toLowerCase() === query.toLowerCase());
+    if (exact) {
+      addToCart(exact);
+      setSearch('');
+      return;
+    }
+    try {
+      const res = await productsApi.lookup({ barcode: query, sku: query });
+      const payload = (res as any).data ?? res;
+      const product = payload.data ?? payload;
+      if (product?.id) {
+        addToCart(product);
+        setSearch('');
+      }
+    } catch {
+      // Keep the search text so the cashier can continue filtering manually.
     }
   };
 
@@ -378,6 +574,44 @@ export default function PosPage() {
           </div>
         </div>
       )}
+      {receipt && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18 }}>
+          <div className="adm-card" style={{ width: 'min(520px, 100%)', padding: 20 }}>
+            <div className="receipt-print-area">
+              <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                <div style={{ fontWeight: 900, fontSize: '1.2rem' }}>LoyaltyOS Receipt</div>
+                <div style={{ color: 'var(--shop-text-secondary)', fontSize: '0.82rem' }}>{new Date(receipt.createdAt).toLocaleString('en-GB')}</div>
+                <div style={{ fontFamily: 'monospace', fontSize: '0.78rem', marginTop: 4 }}>{receipt.id}</div>
+              </div>
+              <div style={{ borderTop: '1px dashed var(--shop-border)', borderBottom: '1px dashed var(--shop-border)', padding: '10px 0', marginBottom: 12 }}>
+                <div style={{ fontWeight: 800 }}>{receipt.customerName}</div>
+                <div style={{ color: 'var(--shop-text-secondary)', fontSize: '0.82rem' }}>{receipt.customerPhone}</div>
+              </div>
+              {receipt.items.map((item) => (
+                <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginBottom: 8 }}>
+                  <div>
+                    <div style={{ fontWeight: 800 }}>{item.product.name}</div>
+                    <div style={{ color: 'var(--shop-text-secondary)', fontSize: '0.78rem' }}>{item.quantity} x {toMoney(Number(item.unitPrice))}</div>
+                  </div>
+                  <div style={{ fontWeight: 900 }}>{toMoney(Number(item.unitPrice) * item.quantity)}</div>
+                </div>
+              ))}
+              <div style={{ borderTop: '1px dashed var(--shop-border)', marginTop: 12, paddingTop: 12, display: 'grid', gap: 6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Subtotal</span><strong>{toMoney(receipt.subtotal)}</strong></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Discount</span><strong>- {toMoney(receipt.discount)}</strong></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Tax</span><strong>{toMoney(receipt.tax)}</strong></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.15rem' }}><span>Total</span><strong>{toMoney(receipt.total)}</strong></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Paid ({receipt.paymentMethod.replace('_', ' ')})</span><strong>{toMoney(receipt.paid)}</strong></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Change</span><strong>{toMoney(receipt.change)}</strong></div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
+              <button className="adm-btn adm-btn--ghost" onClick={() => setReceipt(null)}>Close</button>
+              <button className="adm-btn adm-btn--primary" onClick={() => window.print()}>Print</button>
+            </div>
+          </div>
+        </div>
+      )}
       {isMenuOpen && (
         <>
           <div className="pos-menu-backdrop" onClick={() => setIsMenuOpen(false)} />
@@ -399,11 +633,16 @@ export default function PosPage() {
               {!isStaff && <NavLink className="pos-menu-link" to="/dashboard">Dashboard</NavLink>}
               {!isStaff && <NavLink className="pos-menu-link" to="/customers">Customers</NavLink>}
               <NavLink className="pos-menu-link" to="/sales">Sales</NavLink>
+              <NavLink className="pos-menu-link" to="/shifts">Shifts</NavLink>
+              {!isStaff && <NavLink className="pos-menu-link" to="/reports">Reports</NavLink>}
               {!isStaff && <NavLink className="pos-menu-link" to="/gift-cards">Gift Cards</NavLink>}
               {!isStaff && <NavLink className="pos-menu-link" to="/messages">Messages</NavLink>}
               {!isStaff && <NavLink className="pos-menu-link" to="/rewards">Rewards</NavLink>}
+              {!isStaff && <NavLink className="pos-menu-link" to="/redeem">Redeem</NavLink>}
               {!isStaff && <NavLink className="pos-menu-link" to="/users">Staff</NavLink>}
               {!isStaff && <NavLink className="pos-menu-link" to="/products">Products</NavLink>}
+              {!isStaff && <NavLink className="pos-menu-link" to="/inventory">Inventory</NavLink>}
+              {!isStaff && <NavLink className="pos-menu-link" to="/operations">Operations</NavLink>}
               {!isStaff && <NavLink className="pos-menu-link" to="/promotions">Promotions</NavLink>}
               {!isStaff && <NavLink className="pos-menu-link" to="/settings">Settings</NavLink>}
             </nav>
@@ -472,13 +711,30 @@ export default function PosPage() {
           <svg className="pos-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
-          <input 
+              <input 
             type="text" 
-            placeholder="Search products by name or SKU..." 
+            placeholder="Search products by name, SKU, or scan barcode..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={handleProductSearchKeyDown}
           />
         </div>
+
+        {(heldOrders.length > 0 || offlineQueued > 0 || currentShift) && (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '10px 0' }}>
+            {currentShift && <span className="adm-badge adm-badge--success">Shift open</span>}
+            {heldOrders.map((order) => (
+              <button key={order.id} className="adm-btn adm-btn--ghost adm-btn--sm" onClick={() => resumeHeldOrder(order)}>
+                Resume {order.label || 'Held order'}
+              </button>
+            ))}
+            {offlineQueued > 0 && (
+              <button className="adm-btn adm-btn--ghost adm-btn--sm" onClick={syncOfflineQueue}>
+                Sync offline ({offlineQueued})
+              </button>
+            )}
+          </div>
+        )}
         </div>
 
         <div className="pos-categories">
@@ -551,6 +807,14 @@ export default function PosPage() {
               onClick={() => setCart([])}
             >
               Clear
+            </button>
+            <button
+              className="shop-btn shop-btn--ghost"
+              style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+              onClick={holdCurrentOrder}
+              disabled={cart.length === 0}
+            >
+              Hold
             </button>
           </div>
         </div>
@@ -708,7 +972,7 @@ export default function PosPage() {
           
           <div className="pos-summary-row">
             <span>Subtotal</span>
-            <span>Rs. {(promoPreview?.subtotal ?? cartTotal).toLocaleString()}</span>
+            <span>{toMoney(promoPreview?.subtotal ?? cartTotal)}</span>
           </div>
           <div className="pos-summary-row">
             <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -716,16 +980,16 @@ export default function PosPage() {
               {promoLoading ? <span style={{ fontSize: '0.72rem', color: 'var(--shop-text-muted)' }}>calculatingâ€¦</span> : null}
             </span>
             <span style={{ color: '#059669', fontWeight: 800 }}>
-              - Rs. {(promoPreview?.discountTotal ?? 0).toLocaleString()}
+              - {toMoney(discountTotal)}
             </span>
           </div>
           <div className="pos-summary-row">
-            <span>Tax (0%)</span>
-            <span>Rs. 0</span>
+            <span>Tax</span>
+            <span>{toMoney(taxTotal)}</span>
           </div>
           <div className="pos-summary-total">
             <span>Total</span>
-            <span>Rs. {(promoPreview?.total ?? cartTotal).toLocaleString()}</span>
+            <span>{toMoney(payableTotal)}</span>
           </div>
 
           <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
@@ -744,6 +1008,41 @@ export default function PosPage() {
             >
               Apply
             </button>
+          </div>
+
+          <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+            <select
+              className="pos-customer-input"
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value as typeof paymentMethod)}
+            >
+              <option value="cash">Cash</option>
+              <option value="card">Card</option>
+              <option value="gift_card">Gift Card</option>
+              <option value="split">Split Payment</option>
+            </select>
+            {(paymentMethod === 'cash' || paymentMethod === 'split') && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center' }}>
+                <input
+                  className="pos-customer-input"
+                  placeholder="Cash received"
+                  value={cashReceived}
+                  onChange={(e) => setCashReceived(e.target.value)}
+                  inputMode="decimal"
+                />
+                <div style={{ fontWeight: 900, color: 'var(--shop-text-secondary)' }}>
+                  Change {toMoney(changeDue)}
+                </div>
+              </div>
+            )}
+            {(paymentMethod === 'card' || paymentMethod === 'split') && (
+              <input
+                className="pos-customer-input"
+                placeholder="Card reference (optional)"
+                value={cardReference}
+                onChange={(e) => setCardReference(e.target.value)}
+              />
+            )}
           </div>
           
           <button 

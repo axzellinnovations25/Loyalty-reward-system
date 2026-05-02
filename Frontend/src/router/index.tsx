@@ -26,6 +26,11 @@ import ProductCategoriesPage from '../features/products/ProductCategoriesPage';
 import PosPage from '../features/pos/PosPage';
 import SalesPage from '../features/sales/SalesPage';
 import PromotionsPage from '../features/promotions/PromotionsPage';
+import ReportsPage from '../features/reports/ReportsPage';
+import InventoryPage from '../features/inventory/InventoryPage';
+import ShiftsPage from '../features/shifts/ShiftsPage';
+import RedeemPage from '../features/redeem/RedeemPage';
+import OperationsPage from '../features/operations/OperationsPage';
 
 // Admin pages
 import AdminLoginPage from '../features/admin/auth/AdminLoginPage';
@@ -87,6 +92,7 @@ export default function AppRouter() {
                     <>
                       <Route path="pos" element={<PosPage />} />
                       <Route path="sales" element={<SalesPage />} />
+                      <Route path="shifts" element={<ShiftsPage />} />
                       <Route index element={<Navigate to="pos" replace />} />
                       <Route path="*" element={<Navigate to="/pos" replace />} />
                     </>
@@ -100,12 +106,17 @@ export default function AppRouter() {
                       <Route path="gift-cards" element={<GiftCardListPage />} />
                       <Route path="gift-cards/scan" element={<ScanGiftCardPage />} />
                       <Route path="rewards" element={<RewardsPage />} />
+                      <Route path="redeem" element={<RedeemPage />} />
                       <Route path="messages" element={<MessageLogPage />} />
                       <Route path="users" element={<UserListPage />} />
                       <Route path="products" element={<ProductListPage />} />
+                      <Route path="inventory" element={<InventoryPage />} />
+                      <Route path="operations" element={<OperationsPage />} />
                       <Route path="pos" element={<PosPage />} />
                       <Route path="products/categories" element={<ProductCategoriesPage />} />
                       <Route path="sales" element={<SalesPage />} />
+                      <Route path="reports" element={<ReportsPage />} />
+                      <Route path="shifts" element={<ShiftsPage />} />
                       <Route path="promotions" element={<PromotionsPage />} />
                       <Route path="settings" element={<SettingsPage />} />
                       <Route index element={<Navigate to="dashboard" replace />} />

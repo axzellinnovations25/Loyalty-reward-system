@@ -4,10 +4,23 @@ const Joi = require('joi');
 
 const itemSchema = Joi.object({
   productId: Joi.string().uuid().optional().allow(null),
+  variantId: Joi.string().uuid().optional().allow(null),
   name: Joi.string().min(1).max(150).required(),
   sku: Joi.string().max(64).optional().allow(null, ''),
   unitPrice: Joi.number().precision(2).min(0).required(),
   quantity: Joi.number().integer().min(1).required(),
+  taxRate: Joi.number().precision(2).min(0).max(100).optional().allow(null),
+  taxMode: Joi.string().valid('exclusive', 'inclusive').optional().allow(null),
+  modifiers: Joi.array().items(Joi.object().unknown(true)).optional(),
+});
+
+const paymentSchema = Joi.object({
+  tenderType: Joi.string().valid('cash', 'card', 'gift_card', 'store_credit', 'qr', 'bank_transfer', 'split', 'other').required(),
+  amount: Joi.number().precision(2).positive().required(),
+  reference: Joi.string().max(100).optional().allow('', null),
+  status: Joi.string().valid('pending', 'authorized', 'captured', 'failed').optional(),
+  terminalId: Joi.string().uuid().optional().allow(null),
+  metadata: Joi.object().unknown(true).optional().allow(null),
 });
 
 const createSchema = Joi.object({
@@ -15,6 +28,17 @@ const createSchema = Joi.object({
   // Backwards compatible: POS can send either `amount` (legacy) or `items`.
   amount: Joi.number().positive().optional(),
   items: Joi.array().items(itemSchema).min(1).optional(),
+  payments: Joi.array().items(paymentSchema).optional(),
+  paymentMethod: Joi.string().valid('cash', 'card', 'gift_card', 'store_credit', 'qr', 'bank_transfer', 'split', 'other').optional(),
+  paidAmount: Joi.number().precision(2).min(0).optional(),
+  terminalId: Joi.string().uuid().optional().allow(null),
+  shiftId: Joi.string().uuid().optional().allow(null),
+  heldOrderId: Joi.string().uuid().optional().allow(null),
+  serviceCharge: Joi.number().precision(2).min(0).optional(),
+  businessTaxId: Joi.string().max(100).optional().allow('', null),
+  receiptTemplateVersion: Joi.string().max(50).optional().allow('', null),
+  createKitchenTicket: Joi.boolean().optional(),
+  kitchenNote: Joi.string().max(500).optional().allow('', null),
   couponCode: Joi.string().max(50).optional().allow('', null).custom((v) => (v ? String(v).trim().toUpperCase() : null)),
   managerPassword: Joi.string().min(4).max(200).optional().allow('', null),
   reference: Joi.string().max(100).optional().allow(''),

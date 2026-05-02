@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { purchasesApi } from '../../api/purchases';
+import { posApi } from '../../api/pos';
 import type { Purchase } from '../../types';
 
 function toNumber(v: any): number {
@@ -183,6 +184,22 @@ export default function SalesPage() {
                           onClick={() => navigate(`/pos?returnPurchaseId=${p.id}`)}
                         >
                           Return
+                        </button>
+                        <button
+                          className="adm-btn adm-btn--ghost adm-btn--sm"
+                          disabled={p.isVoided}
+                          onClick={async () => {
+                            const reason = prompt('Refund reason', 'Customer refund');
+                            if (!reason) return;
+                            try {
+                              await posApi.createRefund({ purchaseId: p.id, reason, method: 'original_payment' });
+                              fetchSales();
+                            } catch (err: any) {
+                              alert(err.message || 'Failed to refund sale.');
+                            }
+                          }}
+                        >
+                          Refund
                         </button>
                         <button
                           className="adm-btn adm-btn--ghost adm-btn--sm"

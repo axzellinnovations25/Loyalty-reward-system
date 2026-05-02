@@ -368,6 +368,26 @@
   background: var(--shop-bg);
 }
 
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .receipt-print-area,
+  .receipt-print-area * {
+    visibility: visible !important;
+  }
+
+  .receipt-print-area {
+    position: fixed;
+    inset: 0;
+    width: 80mm;
+    padding: 12mm;
+    background: #fff;
+    color: #111827;
+  }
+}
+
 .pos-customer-create {
   margin-top: 10px;
   padding: 10px;

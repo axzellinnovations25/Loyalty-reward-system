@@ -15,6 +15,8 @@ async function findAll(shopId, query) {
       orderBy: { createdAt: 'desc' },
       include: {
         customer: { select: { id: true, name: true, phone: true } },
+        payments: true,
+        receipts: true,
       },
     }),
     db.purchase.count({ where }),
@@ -46,7 +48,7 @@ async function findById(id, shopId) {
   try {
     return await db.purchase.findFirst({
       where: { id, shopId },
-      include: { customer: true, items: true, promotions: true },
+      include: { customer: true, items: true, promotions: true, payments: true, receipts: { include: { events: true } }, refunds: { include: { items: true, payments: true } } },
     });
   } catch (e) {
     // If the DB hasn't applied the PurchaseItem migration yet, Prisma can throw P2021 (table does not exist).

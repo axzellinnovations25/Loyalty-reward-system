@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { productsApi } from '../../api/products';
+import { posApi } from '../../api/pos';
 import type { Product, ProductCategory } from '../../types';
 import AddProductModal from './modals/AddProductModal';
 import EditProductModal from './modals/EditProductModal';
@@ -23,6 +24,11 @@ export default function ProductListPage() {
   const [lowStock, setLowStock] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
+  const [advancedProduct, setAdvancedProduct] = useState<Product | null>(null);
+  const [variants, setVariants] = useState<any[]>([]);
+  const [modifierGroups, setModifierGroups] = useState<any[]>([]);
+  const [variantForm, setVariantForm] = useState({ name: '', sku: '', barcode: '', price: '', stockOnHand: '0' });
+  const [modifierForm, setModifierForm] = useState({ name: '', optionName: '', priceDelta: '0' });
   const [total, setTotal] = useState(0);
 
   const fetchAll = useCallback(async () => {
@@ -66,6 +72,41 @@ export default function ProductListPage() {
     for (const c of categories) map.set(c.id, c.name);
     return map;
   }, [categories]);
+
+  const openAdvanced = async (product: Product) => {
+    setAdvancedProduct(product);
+    const [variantRes, modifierRes] = await Promise.all([
+      posApi.variants(product.id),
+      posApi.modifierGroups(product.id),
+    ]);
+    setVariants(((variantRes as any).data ?? variantRes) as any[]);
+    setModifierGroups(((modifierRes as any).data ?? modifierRes) as any[]);
+  };
+
+  const saveVariant = async () => {
+    if (!advancedProduct) return;
+    await posApi.createVariant(advancedProduct.id, {
+      name: variantForm.name,
+      sku: variantForm.sku,
+      barcode: variantForm.barcode || null,
+      price: variantForm.price ? Number(variantForm.price) : null,
+      stockOnHand: Number(variantForm.stockOnHand || 0),
+    });
+    setVariantForm({ name: '', sku: '', barcode: '', price: '', stockOnHand: '0' });
+    openAdvanced(advancedProduct);
+  };
+
+  const saveModifier = async () => {
+    if (!advancedProduct) return;
+    await posApi.createModifierGroup(advancedProduct.id, {
+      name: modifierForm.name,
+      minSelect: 0,
+      maxSelect: 1,
+      options: [{ name: modifierForm.optionName, priceDelta: Number(modifierForm.priceDelta || 0) }],
+    });
+    setModifierForm({ name: '', optionName: '', priceDelta: '0' });
+    openAdvanced(advancedProduct);
+  };
 
   return (
     <div className="adm-page">
@@ -243,6 +284,9 @@ export default function ProductListPage() {
                         <button className="adm-btn adm-btn--ghost adm-btn--sm" onClick={() => setEditing(p)}>
                           Edit
                         </button>
+                        <button className="adm-btn adm-btn--ghost adm-btn--sm" onClick={() => openAdvanced(p)}>
+                          Variants
+                        </button>
                         <button
                           className="adm-btn adm-btn--ghost adm-btn--sm"
                           style={{ color: 'var(--danger)' }}
@@ -288,6 +332,52 @@ export default function ProductListPage() {
             fetchAll();
           }}
         />
+      )}
+      {advancedProduct && (
+        <div className="adm-modal-overlay">
+          <div className="adm-modal" style={{ maxWidth: 860 }}>
+            <div className="adm-modal-header">
+              <div>
+                <p className="adm-modal-title">Variants & Modifiers</p>
+                <p className="adm-modal-subtitle">{advancedProduct.name}</p>
+              </div>
+              <button className="adm-modal-close" onClick={() => setAdvancedProduct(null)}>x</button>
+            </div>
+            <div className="adm-modal-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+              <div>
+                <h3 style={{ marginTop: 0 }}>Variants</h3>
+                <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
+                  <input className="adm-input" placeholder="Variant name" value={variantForm.name} onChange={(e) => setVariantForm((f) => ({ ...f, name: e.target.value }))} />
+                  <input className="adm-input" placeholder="SKU" value={variantForm.sku} onChange={(e) => setVariantForm((f) => ({ ...f, sku: e.target.value }))} />
+                  <input className="adm-input" placeholder="Barcode" value={variantForm.barcode} onChange={(e) => setVariantForm((f) => ({ ...f, barcode: e.target.value }))} />
+                  <input className="adm-input" placeholder="Price override" value={variantForm.price} onChange={(e) => setVariantForm((f) => ({ ...f, price: e.target.value }))} />
+                  <input className="adm-input" placeholder="Stock" value={variantForm.stockOnHand} onChange={(e) => setVariantForm((f) => ({ ...f, stockOnHand: e.target.value }))} />
+                  <button className="adm-btn adm-btn--primary" onClick={saveVariant}>Add Variant</button>
+                </div>
+                {variants.map((v) => (
+                  <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', padding: 8, borderBottom: '1px solid var(--border)' }}>
+                    <strong>{v.name}</strong><span>{v.sku} / stock {v.stockOnHand}</span>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <h3 style={{ marginTop: 0 }}>Modifiers</h3>
+                <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
+                  <input className="adm-input" placeholder="Group name, e.g. Size" value={modifierForm.name} onChange={(e) => setModifierForm((f) => ({ ...f, name: e.target.value }))} />
+                  <input className="adm-input" placeholder="Option name, e.g. Large" value={modifierForm.optionName} onChange={(e) => setModifierForm((f) => ({ ...f, optionName: e.target.value }))} />
+                  <input className="adm-input" placeholder="Price delta" value={modifierForm.priceDelta} onChange={(e) => setModifierForm((f) => ({ ...f, priceDelta: e.target.value }))} />
+                  <button className="adm-btn adm-btn--primary" onClick={saveModifier}>Add Modifier</button>
+                </div>
+                {modifierGroups.map((g) => (
+                  <div key={g.id} style={{ padding: 8, borderBottom: '1px solid var(--border)' }}>
+                    <strong>{g.name}</strong>
+                    <div style={{ color: 'var(--text-secondary)' }}>{(g.options || []).map((o: any) => `${o.name} (${Number(o.priceDelta) >= 0 ? '+' : ''}${Number(o.priceDelta)})`).join(', ')}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

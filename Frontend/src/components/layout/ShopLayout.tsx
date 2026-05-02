@@ -55,6 +55,18 @@ const NAV_ITEMS: NavItem[] = [
       </svg>
     )
   },
+  {
+    label: 'Reports',
+    path: '/reports',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 3v18h18"></path>
+        <rect x="7" y="12" width="3" height="5"></rect>
+        <rect x="12" y="8" width="3" height="9"></rect>
+        <rect x="17" y="5" width="3" height="12"></rect>
+      </svg>
+    )
+  },
   { 
     label: 'Gift Cards', 
     path: '/gift-cards', 
@@ -84,6 +96,17 @@ const NAV_ITEMS: NavItem[] = [
       </svg>
     )
   },
+  {
+    label: 'Redeem',
+    path: '/redeem',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 12v10H4V12"></path>
+        <path d="M2 7h20v5H2z"></path>
+        <path d="M12 22V7"></path>
+      </svg>
+    )
+  },
   { 
     label: 'Staff', 
     path: '/users', 
@@ -100,6 +123,41 @@ const NAV_ITEMS: NavItem[] = [
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+      </svg>
+    )
+  },
+  {
+    label: 'Inventory',
+    path: '/inventory',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+        <path d="M3.3 7 12 12l8.7-5"></path>
+        <path d="M12 22V12"></path>
+      </svg>
+    )
+  },
+  {
+    label: 'Shifts',
+    path: '/shifts',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+        <path d="M2 10h20"></path>
+        <path d="M7 15h.01M11 15h2"></path>
+      </svg>
+    )
+  },
+  {
+    label: 'Operations',
+    path: '/operations',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 7h18"></path>
+        <path d="M6 7v13"></path>
+        <path d="M18 7v13"></path>
+        <path d="M9 12h6"></path>
+        <path d="M9 16h6"></path>
       </svg>
     )
   },
@@ -138,7 +196,7 @@ export default function ShopLayout({ children }: ShopLayoutProps) {
 
   const visibleNavItems = useMemo(() => {
     if (!isStaff) return NAV_ITEMS;
-    return NAV_ITEMS.filter((i) => i.path === '/pos' || i.path === '/sales');
+    return NAV_ITEMS.filter((i) => i.path === '/pos' || i.path === '/sales' || i.path === '/shifts');
   }, [isStaff]);
 
   const rootClassName = useMemo(() => {
