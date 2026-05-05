@@ -37,7 +37,7 @@ async function findAll(shopId, query) {
         },
         orderBy: { createdAt: 'desc' },
       });
-      return { ...p, pointsRedeemed: redemption ? redemption.pointsRedeemed : 0 };
+      return { ...p, pointsRedeemed: p.pointsRedeemed || (redemption ? redemption.pointsRedeemed : 0) };
     })
   );
 

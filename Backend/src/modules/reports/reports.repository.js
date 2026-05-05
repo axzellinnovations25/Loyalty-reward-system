@@ -1,5 +1,4 @@
-'use strict';
-
+const { Prisma } = require('@prisma/client');
 const db = require('../../config/db');
 
 async function summary(shopId, { from, to }) {
@@ -43,13 +42,21 @@ async function topCustomers(shopId, { limit = 10 }) {
 }
 
 async function purchasesByDay(shopId, { from, to }) {
-  // Raw aggregation — adjust for your DB dialect as needed
+  const conditions = [Prisma.sql`"shopId" = ${shopId}::uuid`];
+  
+  if (from) {
+    conditions.push(Prisma.sql`AND "createdAt" >= ${new Date(from)}`);
+  }
+  if (to) {
+    conditions.push(Prisma.sql`AND "createdAt" <= ${new Date(to)}`);
+  }
+
+  const whereClause = Prisma.join(conditions, ' ');
+
   return db.$queryRaw`
     SELECT DATE("createdAt") as day, COUNT(*) as count, SUM(amount) as revenue
     FROM "Purchase"
-    WHERE "shopId" = ${shopId}
-      ${from ? db.$raw`AND "createdAt" >= ${new Date(from)}` : db.$raw``}
-      ${to   ? db.$raw`AND "createdAt" <= ${new Date(to)}`   : db.$raw``}
+    WHERE ${whereClause}
     GROUP BY DATE("createdAt")
     ORDER BY day ASC
   `;

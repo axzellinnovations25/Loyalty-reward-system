@@ -141,8 +141,9 @@ export default function SalesPage() {
               <tr>
                 <th>Date</th>
                 <th>Customer</th>
-                <th style={{ textAlign: 'right' }}>Amount</th>
-                <th style={{ textAlign: 'center' }}>Points</th>
+                <th style={{ textAlign: 'right' }}>Discount</th>
+                <th style={{ textAlign: 'right' }}>Total</th>
+                <th style={{ textAlign: 'center' }}>Points (Earned / Used)</th>
                 <th style={{ textAlign: 'center' }}>Status</th>
                 <th style={{ textAlign: 'right' }}></th>
               </tr>
@@ -163,13 +164,21 @@ export default function SalesPage() {
                         </div>
                       </div>
                     </td>
+                    <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--success)' }}>
+                      {toNumber(p.discountTotal) > 0 ? `- Rs. ${toNumber(p.discountTotal).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                    </td>
                     <td style={{ textAlign: 'right', fontWeight: 900 }}>
                       Rs. {amount.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td style={{ textAlign: 'center' }}>
+                    <td style={{ textAlign: 'center', display: 'flex', justifyContent: 'center', gap: 6, alignItems: 'center' }}>
                       <span className={`adm-badge ${p.pointsEarned > 0 ? 'adm-badge--success' : 'adm-badge--gray'}`}>
                         +{p.pointsEarned}
                       </span>
+                      {p.pointsRedeemed > 0 && (
+                        <span className="adm-badge" style={{ background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }}>
+                          -{p.pointsRedeemed}
+                        </span>
+                      )}
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <span className={`adm-badge ${p.isVoided ? 'adm-badge--gray' : 'adm-badge--success'}`}>

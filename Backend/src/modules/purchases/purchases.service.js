@@ -167,6 +167,20 @@ async function create(shopId, data) {
       finalAmount = applied.totals.total;
     }
 
+    let pointsDiscountValue = 0;
+    const redemptionPoints = Number(data.redemptionPoints) || 0;
+    if (redemptionPoints > 0) {
+      if (settings?.maxRedeemMode === 'flat_amount') {
+        pointsDiscountValue = redemptionPoints / Number(settings?.redemptionValue || 500);
+      } else if (settings?.maxRedeemMode === 'percent_of_bill') {
+        pointsDiscountValue = (Number(settings?.redemptionValue || 10) / 100) * subtotal;
+      }
+      if (pointsDiscountValue > finalAmount) pointsDiscountValue = finalAmount;
+      finalAmount -= pointsDiscountValue;
+      discountTotal += pointsDiscountValue;
+    }
+
+
     const lineTaxes = items
       ? items.map((it, idx) => {
           const lineSubtotal = Number(lineSubtotals[idx] ?? Number(it.unitPrice) * Number(it.quantity));
@@ -219,6 +233,7 @@ async function create(shopId, data) {
         serviceCharge,
         amount: grandTotal,
         pointsEarned,
+        pointsRedeemed: redemptionPoints,
         receiptNumber,
         paymentStatus: capturedPaymentTotal >= grandTotal ? 'captured' : 'pending',
         terminalId: data.terminalId || null,
@@ -410,13 +425,43 @@ async function create(shopId, data) {
       });
     }
 
-    await tx.customer.update({
-      where: { id: data.customerId },
-      data: { 
-        totalPoints: { increment: pointsEarned },
-        lastActivityAt: new Date()
-      },
-    });
+    if (redemptionPoints > 0) {
+      await tx.redemption.create({
+        data: {
+          shopId,
+          customerId: data.customerId,
+          userId: data.userId,
+          pointsRedeemed: redemptionPoints,
+          discountValue: pointsDiscountValue,
+          notes: `POS Redemption for receipt ${receiptNumber}`,
+        },
+      });
+      await tx.customer.update({
+        where: { id: data.customerId },
+        data: { 
+          totalPoints: { decrement: redemptionPoints },
+          lastActivityAt: new Date()
+        },
+      });
+    } else {
+      await tx.customer.update({
+        where: { id: data.customerId },
+        data: { 
+          lastActivityAt: new Date()
+        },
+      });
+    }
+
+    // Add earned points separately to ensure clean state
+    if (pointsEarned > 0) {
+      await tx.customer.update({
+        where: { id: data.customerId },
+        data: { 
+          totalPoints: { increment: pointsEarned }
+        },
+      });
+    }
+
     return p;
   });
 
@@ -441,7 +486,7 @@ async function voidPurchase(shopId, id, userId) {
     });
 
     const currentPoints = purchase.customer.totalPoints;
-    const newPoints = Math.max(0, currentPoints - purchase.pointsEarned);
+    const newPoints = Math.max(0, currentPoints - purchase.pointsEarned + (purchase.pointsRedeemed || 0));
 
     await tx.customer.update({
       where: { id: purchase.customerId },
@@ -449,6 +494,23 @@ async function voidPurchase(shopId, id, userId) {
         totalPoints: newPoints,
       },
     });
+
+    if (purchase.pointsRedeemed > 0) {
+      await tx.redemption.updateMany({
+        where: { 
+          shopId, 
+          customerId: purchase.customerId,
+          pointsRedeemed: purchase.pointsRedeemed,
+          notes: `POS Redemption for receipt ${purchase.receiptNumber}`,
+          isVoided: false
+        },
+        data: {
+          isVoided: true,
+          voidedBy: userId,
+          voidedAt: new Date()
+        }
+      });
+    }
 
     const qtyByProduct = new Map();
     const qtyByVariant = new Map();

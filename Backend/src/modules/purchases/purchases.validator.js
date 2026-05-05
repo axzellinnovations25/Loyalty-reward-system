@@ -43,6 +43,7 @@ const createSchema = Joi.object({
   managerPassword: Joi.string().min(4).max(200).optional().allow('', null),
   reference: Joi.string().max(100).optional().allow(''),
   notes: Joi.string().max(500).optional().allow(''),
+  redemptionPoints: Joi.number().integer().min(0).optional(),
 }).custom((value, helpers) => {
   if (!value.amount && (!value.items || value.items.length === 0)) {
     return helpers.error('any.custom', { message: 'Provide amount or items' });

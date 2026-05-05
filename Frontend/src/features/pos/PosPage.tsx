@@ -5,6 +5,8 @@ import { customersApi } from '../../api/customers';
 import { purchasesApi } from '../../api/purchases';
 import { promotionsApi } from '../../api/promotions';
 import { posApi } from '../../api/pos';
+import { settingsApi } from '../../api/settings';
+import { redemptionsApi } from '../../api/redemptions';
 import type { Product, ProductCategory, Customer } from '../../types';
 import type { HeldOrder, RegisterShift } from '../../types/pos';
 import { useAuth } from '../../hooks/useAuth';
@@ -31,6 +33,9 @@ interface ReceiptSnapshot {
   paymentMethod: string;
   paid: number;
   change: number;
+  pointsEarned?: number;
+  pointsRedeemed?: number;
+  totalPoints?: number;
 }
 
 const OFFLINE_QUEUE_KEY = 'pos_offline_sales_queue';
@@ -80,6 +85,12 @@ export default function PosPage() {
   const [returningPurchaseId, setReturningPurchaseId] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  // Loyalty State
+  const [settings, setSettings] = useState<any>(null);
+  const [redemptionPreview, setRedemptionPreview] = useState<any>(null);
+  const [applyRedemption, setApplyRedemption] = useState(false);
+  const [redemptionPoints, setRedemptionPoints] = useState(0);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setIsMenuOpen(false);
@@ -110,6 +121,7 @@ export default function PosPage() {
 
   useEffect(() => {
     fetchData();
+    settingsApi.get().then((res) => setSettings(((res as any).data ?? res))).catch(() => {});
   }, [fetchData]);
 
   const refreshHeldOrders = useCallback(async () => {
@@ -258,8 +270,17 @@ export default function PosPage() {
     return cart.reduce((sum, item) => sum + (Number(item.unitPrice) * item.quantity), 0);
   }, [cart]);
 
-  const discountTotal = useMemo(() => Number(promoPreview?.discountTotal ?? 0), [promoPreview]);
-  const netTotal = useMemo(() => Number(promoPreview?.total ?? cartTotal), [cartTotal, promoPreview]);
+  const computeDiscount = (pts: number) => {
+    if (pts < 1) return 0;
+    const mode = redemptionPreview?.maxRedeemMode ?? settings?.maxRedeemMode;
+    const rate = Number(redemptionPreview?.redemptionValue ?? settings?.redemptionValue ?? 500);
+    if (mode === 'flat_amount') return pts / rate;
+    if (mode === 'percent_of_bill') return (rate / 100) * (promoPreview?.subtotal ?? cartTotal);
+    return 0;
+  };
+  const pointsDiscountValue = applyRedemption ? computeDiscount(redemptionPoints) : 0;
+  const discountTotal = useMemo(() => Number(promoPreview?.discountTotal ?? 0) + pointsDiscountValue, [promoPreview, pointsDiscountValue]);
+  const netTotal = useMemo(() => Math.max(0, Number(promoPreview?.total ?? cartTotal) - pointsDiscountValue), [cartTotal, promoPreview, pointsDiscountValue]);
   const taxTotal = useMemo(() => {
     const subtotal = cart.reduce((sum, item) => {
       const rate = Number(item.product.taxRate || 0);
@@ -268,12 +289,32 @@ export default function PosPage() {
     }, 0);
     return Math.max(0, subtotal);
   }, [cart]);
-  const payableTotal = useMemo(() => netTotal + taxTotal, [netTotal, taxTotal]);
+  const payableTotal = useMemo(() => Math.max(0, netTotal + taxTotal), [netTotal, taxTotal]);
+  const pointsEarned = useMemo(() => {
+    if (!settings?.pointsPerAmount) return 0;
+    return Math.floor(payableTotal / Number(settings.pointsPerAmount));
+  }, [payableTotal, settings]);
   const paidAmount = useMemo(() => {
     if (paymentMethod === 'cash' || paymentMethod === 'split') return Number(cashReceived || 0);
     return payableTotal;
   }, [cashReceived, payableTotal, paymentMethod]);
   const changeDue = useMemo(() => Math.max(0, paidAmount - payableTotal), [paidAmount, payableTotal]);
+
+  useEffect(() => {
+    if (selectedCustomer && selectedCustomer.totalPoints >= (settings?.minRedeemPoints || 0)) {
+      const minPts = settings?.minRedeemPoints ?? 0;
+      redemptionsApi.preview(selectedCustomer.id, selectedCustomer.totalPoints).then(res => {
+        setRedemptionPreview((res as any).data ?? res);
+        if (!applyRedemption) {
+          setRedemptionPoints(minPts > 0 && settings?.maxRedeemMode === 'percent_of_bill' ? minPts : selectedCustomer.totalPoints);
+        }
+      }).catch(() => setRedemptionPreview(null));
+    } else {
+      setRedemptionPreview(null);
+      setApplyRedemption(false);
+      setRedemptionPoints(0);
+    }
+  }, [selectedCustomer, settings, applyRedemption]);
 
   const hasPriceOverrides = useMemo(() => {
     return cart.some((it) => Math.abs(Number(it.unitPrice) - Number(it.product.price)) > 0.009);
@@ -412,6 +453,7 @@ export default function PosPage() {
         paymentMethod,
         paidAmount,
         shiftId: currentShift?.id || null,
+        redemptionPoints: applyRedemption ? redemptionPoints : 0,
         payments: [{
           tenderType: paymentMethod,
           amount: paidAmount,
@@ -437,6 +479,9 @@ export default function PosPage() {
         paymentMethod,
         paid: paidAmount,
         change: changeDue,
+        pointsEarned: savedPurchase?.pointsEarned ?? pointsEarned,
+        pointsRedeemed: applyRedemption ? redemptionPoints : 0,
+        totalPoints: Math.max(0, (selectedCustomer?.totalPoints || 0) + (savedPurchase?.pointsEarned ?? pointsEarned) - (applyRedemption ? redemptionPoints : 0)),
       });
 
       setCart([]);
@@ -603,6 +648,13 @@ export default function PosPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.15rem' }}><span>Total</span><strong>{toMoney(receipt.total)}</strong></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Paid ({receipt.paymentMethod.replace('_', ' ')})</span><strong>{toMoney(receipt.paid)}</strong></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Change</span><strong>{toMoney(receipt.change)}</strong></div>
+              </div>
+              <div style={{ borderTop: '1px dashed var(--shop-border)', marginTop: 12, paddingTop: 12, display: 'grid', gap: 6, fontSize: '0.85rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Points Earned</span><strong style={{ color: '#059669' }}>+{receipt.pointsEarned || 0}</strong></div>
+                {(receipt.pointsRedeemed || 0) > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Points Used</span><strong style={{ color: '#dc2626' }}>-{receipt.pointsRedeemed}</strong></div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>New Point Balance</span><strong>{receipt.totalPoints || 0}</strong></div>
               </div>
             </div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
@@ -977,12 +1029,49 @@ export default function PosPage() {
           <div className="pos-summary-row">
             <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               Discount
-              {promoLoading ? <span style={{ fontSize: '0.72rem', color: 'var(--shop-text-muted)' }}>calculatingâ€¦</span> : null}
+              {promoLoading ? <span style={{ fontSize: '0.72rem', color: 'var(--shop-text-muted)' }}>calculating…</span> : null}
             </span>
             <span style={{ color: '#059669', fontWeight: 800 }}>
               - {toMoney(discountTotal)}
             </span>
           </div>
+
+          {redemptionPreview && selectedCustomer && (
+            <div className="pos-summary-row" style={{ background: 'var(--shop-bg)', padding: '8px 12px', borderRadius: 8, marginTop: 4, marginBottom: 4, display: 'flex', flexDirection: 'column', gap: 6, border: '1px solid var(--shop-border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700 }}>
+                  <input 
+                    type="checkbox" 
+                    checked={applyRedemption} 
+                    onChange={(e) => setApplyRedemption(e.target.checked)} 
+                    style={{ accentColor: 'var(--shop-primary)', width: 16, height: 16 }}
+                  />
+                  Use Loyalty Points ({selectedCustomer.totalPoints} pts available)
+                </label>
+                {applyRedemption && (
+                  <span style={{ color: '#059669', fontWeight: 800 }}>
+                    - {toMoney(pointsDiscountValue)}
+                  </span>
+                )}
+              </div>
+              
+              {applyRedemption && settings?.maxRedeemMode === 'flat_amount' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                  <input
+                    type="number"
+                    className="pos-customer-input"
+                    style={{ padding: '4px 8px', fontSize: '0.8rem', width: 80 }}
+                    min={1}
+                    max={selectedCustomer.totalPoints}
+                    value={redemptionPoints}
+                    onChange={(e) => setRedemptionPoints(Math.min(selectedCustomer.totalPoints, Math.max(1, parseInt(e.target.value) || 0)))}
+                  />
+                  <span style={{ fontSize: '0.75rem', color: 'var(--shop-text-secondary)' }}>pts to use</span>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="pos-summary-row">
             <span>Tax</span>
             <span>{toMoney(taxTotal)}</span>
@@ -991,6 +1080,19 @@ export default function PosPage() {
             <span>Total</span>
             <span>{toMoney(payableTotal)}</span>
           </div>
+
+          {selectedCustomer && (
+            <div style={{ marginTop: 8, padding: '8px 12px', background: 'rgba(15,23,42,0.03)', borderRadius: 6, fontSize: '0.8rem', border: '1px dashed var(--shop-border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ color: 'var(--shop-text-secondary)' }}>Points to Earn</span>
+                <span style={{ fontWeight: 800, color: '#059669' }}>+{pointsEarned} pts</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--shop-text-secondary)' }}>Current Balance</span>
+                <span style={{ fontWeight: 800 }}>{selectedCustomer.totalPoints} pts</span>
+              </div>
+            </div>
+          )}
 
           <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
             <input
