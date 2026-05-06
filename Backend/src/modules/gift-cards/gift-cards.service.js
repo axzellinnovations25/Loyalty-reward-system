@@ -16,7 +16,8 @@ async function list(shopId, query) {
 async function getById(shopId, id) {
   const card = await repository.findById(id, shopId);
   if (!card) throw Object.assign(new Error('Gift card not found'), { status: 404 });
-  return card;
+  const qrCodeImage = await qrcode.toDataURL(card.code);
+  return { ...card, qrCodeImage };
 }
 
 async function create(shopId, userId, data) {
@@ -98,4 +99,28 @@ async function redeem(shopId, userId, { code }) {
   return updatedCard;
 }
 
-module.exports = { list, getById, create, validateCode, redeem };
+async function softDelete(shopId, id) {
+  const card = await repository.findById(id, shopId);
+  if (!card) throw Object.assign(new Error('Gift card not found'), { status: 404 });
+  if (card.status === 'used') throw Object.assign(new Error('Cannot delete a redeemed gift card'), { status: 422 });
+
+  const deleted = await db.giftCard.update({
+    where: { id: card.id },
+    data: { deletedAt: new Date() },
+  });
+
+  await db.auditLog.create({
+    data: {
+      shopId,
+      userId: card.createdBy,
+      action: 'gift_card_deleted',
+      entityType: 'GiftCard',
+      entityId: card.id,
+      details: { code: card.code, value: card.value },
+    },
+  });
+
+  return deleted;
+}
+
+module.exports = { list, getById, create, validateCode, redeem, softDelete };

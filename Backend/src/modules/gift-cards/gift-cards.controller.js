@@ -8,5 +8,6 @@ const getById = async (req, res, next) => { try { return ok(res, await service.g
 const create = async (req, res, next) => { try { return created(res, await service.create(req.shopId, req.user.userId, req.body)); } catch (e) { next(e); } };
 const redeem = async (req, res, next) => { try { return ok(res, await service.redeem(req.shopId, req.user.userId, req.body)); } catch (e) { next(e); } };
 const validate = async (req, res, next) => { try { return ok(res, await service.validateCode(req.shopId, req.params.code)); } catch (e) { next(e); } };
+const remove = async (req, res, next) => { try { return ok(res, await service.softDelete(req.shopId, req.params.id)); } catch (e) { next(e); } };
 
-module.exports = { list, getById, create, redeem, validate };
+module.exports = { list, getById, create, redeem, validate, remove };

@@ -16,7 +16,7 @@ const itemSchema = Joi.object({
 
 const paymentSchema = Joi.object({
   tenderType: Joi.string().valid('cash', 'card', 'gift_card', 'store_credit', 'qr', 'bank_transfer', 'split', 'other').required(),
-  amount: Joi.number().precision(2).positive().required(),
+  amount: Joi.number().precision(2).min(0).required(),
   reference: Joi.string().max(100).optional().allow('', null),
   status: Joi.string().valid('pending', 'authorized', 'captured', 'failed').optional(),
   terminalId: Joi.string().uuid().optional().allow(null),

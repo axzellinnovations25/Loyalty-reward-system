@@ -463,7 +463,7 @@ async function create(shopId, data) {
     }
 
     return p;
-  });
+  }, { maxWait: 10000, timeout: 30000 });
 
   const savedPurchase = await repository.findById(purchase.id, shopId);
 
@@ -581,7 +581,7 @@ async function voidPurchase(shopId, id, userId) {
     });
 
     return updatedPurchase;
-  });
+  }, { maxWait: 10000, timeout: 30000 });
 }
 
 module.exports = { list, getById, create, voidPurchase };

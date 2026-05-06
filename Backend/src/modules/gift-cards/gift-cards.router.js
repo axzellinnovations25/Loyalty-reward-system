@@ -16,5 +16,6 @@ router.get('/validate/:code', controller.validate);
 router.get('/:id',    controller.getById);
 router.post('/',      requireLimit(LIMITS.GIFT_CARDS, repository.countThisMonth), validateBody(createSchema), controller.create);
 router.post('/redeem', validateBody(redeemSchema), controller.redeem);
+router.delete('/:id', controller.remove);
 
 module.exports = router;

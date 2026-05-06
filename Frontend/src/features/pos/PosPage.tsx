@@ -295,7 +295,10 @@ export default function PosPage() {
     return Math.floor(payableTotal / Number(settings.pointsPerAmount));
   }, [payableTotal, settings]);
   const paidAmount = useMemo(() => {
-    if (paymentMethod === 'cash' || paymentMethod === 'split') return Number(cashReceived || 0);
+    if (paymentMethod === 'cash' || paymentMethod === 'split') {
+      if (cashReceived === '') return payableTotal;
+      return Number(cashReceived || 0);
+    }
     return payableTotal;
   }, [cashReceived, payableTotal, paymentMethod]);
   const changeDue = useMemo(() => Math.max(0, paidAmount - payableTotal), [paidAmount, payableTotal]);

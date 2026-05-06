@@ -5,7 +5,7 @@ const { parsePagination, buildMeta } = require('../../utils/pagination');
 
 async function findAll(shopId, query) {
   const { skip, take, page, limit } = parsePagination(query);
-  const where = { shopId, ...(query.status && { status: query.status }) };
+  const where = { shopId, deletedAt: null, ...(query.status && { status: query.status }) };
 
   const [items, total] = await Promise.all([
     db.giftCard.findMany({ where, skip, take, orderBy: { createdAt: 'desc' } }),
