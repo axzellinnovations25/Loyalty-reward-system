@@ -11,6 +11,9 @@ export default function ForceChangePasswordPage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -84,13 +87,32 @@ export default function ForceChangePasswordPage() {
               <input
                 id="currentPassword"
                 className="sl-input"
-                type="password"
+                type={showCurrent ? 'text' : 'password'}
                 placeholder="Current password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 required
                 disabled={loading}
               />
+              <button
+                type="button"
+                className="sl-eye"
+                onClick={() => setShowCurrent(!showCurrent)}
+                aria-label={showCurrent ? 'Hide password' : 'Show password'}
+                tabIndex={-1}
+              >
+                {showCurrent ? (
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M1 8C2.5 5 5 3.5 8 3.5s5.5 1.5 7 4.5c-1.5 3-4 4.5-7 4.5S2.5 11 1 8z" stroke="currentColor" strokeWidth="1.3"/>
+                    <line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                  </svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M1 8C2.5 5 5 3.5 8 3.5s5.5 1.5 7 4.5c-1.5 3-4 4.5-7 4.5S2.5 11 1 8z" stroke="currentColor" strokeWidth="1.3"/>
+                    <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.3"/>
+                  </svg>
+                )}
+              </button>
             </div>
           </div>
 
@@ -100,13 +122,32 @@ export default function ForceChangePasswordPage() {
               <input
                 id="newPassword"
                 className="sl-input"
-                type="password"
+                type={showNew ? 'text' : 'password'}
                 placeholder="New password (min 6 chars)"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
                 disabled={loading}
               />
+              <button
+                type="button"
+                className="sl-eye"
+                onClick={() => setShowNew(!showNew)}
+                aria-label={showNew ? 'Hide password' : 'Show password'}
+                tabIndex={-1}
+              >
+                {showNew ? (
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M1 8C2.5 5 5 3.5 8 3.5s5.5 1.5 7 4.5c-1.5 3-4 4.5-7 4.5S2.5 11 1 8z" stroke="currentColor" strokeWidth="1.3"/>
+                    <line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                  </svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M1 8C2.5 5 5 3.5 8 3.5s5.5 1.5 7 4.5c-1.5 3-4 4.5-7 4.5S2.5 11 1 8z" stroke="currentColor" strokeWidth="1.3"/>
+                    <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.3"/>
+                  </svg>
+                )}
+              </button>
             </div>
           </div>
 
@@ -116,13 +157,32 @@ export default function ForceChangePasswordPage() {
               <input
                 id="confirmPassword"
                 className="sl-input"
-                type="password"
+                type={showConfirm ? 'text' : 'password'}
                 placeholder="Confirm new password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 disabled={loading}
               />
+              <button
+                type="button"
+                className="sl-eye"
+                onClick={() => setShowConfirm(!showConfirm)}
+                aria-label={showConfirm ? 'Hide password' : 'Show password'}
+                tabIndex={-1}
+              >
+                {showConfirm ? (
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M1 8C2.5 5 5 3.5 8 3.5s5.5 1.5 7 4.5c-1.5 3-4 4.5-7 4.5S2.5 11 1 8z" stroke="currentColor" strokeWidth="1.3"/>
+                    <line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                  </svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M1 8C2.5 5 5 3.5 8 3.5s5.5 1.5 7 4.5c-1.5 3-4 4.5-7 4.5S2.5 11 1 8z" stroke="currentColor" strokeWidth="1.3"/>
+                    <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.3"/>
+                  </svg>
+                )}
+              </button>
             </div>
           </div>
 
@@ -141,12 +201,8 @@ export default function ForceChangePasswordPage() {
             )}
           </button>
           
-          <button
-             type="button"
-             style={{ background: 'transparent', border: 'none', color: 'var(--sl-text-light)', cursor: 'pointer', marginTop: '1rem', width: '100%' }}
-             onClick={() => clearAuth()}
-          >
-             Sign out
+          <button type="button" className="sl-signout" onClick={() => clearAuth()}>
+            Sign out
           </button>
         </form>
       </div>

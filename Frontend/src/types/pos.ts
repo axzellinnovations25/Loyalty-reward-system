@@ -1,7 +1,7 @@
 import type { Product } from './product';
 import type { Purchase } from './purchase';
 
-export type PaymentTenderType = 'cash' | 'card' | 'gift_card' | 'store_credit' | 'qr' | 'bank_transfer' | 'split' | 'other';
+export type PaymentTenderType = 'cash' | 'card' | 'gift_card' | 'store_credit' | 'qr' | 'bank_transfer' | 'other';
 export type PaymentStatus = 'pending' | 'authorized' | 'captured' | 'refunded' | 'voided' | 'failed';
 export type ShiftStatus = 'open' | 'closed';
 export type StockMovementType = 'sale' | 'refund' | 'return' | 'adjustment' | 'receiving' | 'waste' | 'transfer' | 'manual';

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { purchasesApi } from '../../api/purchases';
-import { posApi } from '../../api/pos';
 import type { Purchase } from '../../types';
 
 function toNumber(v: any): number {
@@ -170,15 +169,17 @@ export default function SalesPage() {
                     <td style={{ textAlign: 'right', fontWeight: 900 }}>
                       Rs. {amount.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td style={{ textAlign: 'center', display: 'flex', justifyContent: 'center', gap: 6, alignItems: 'center' }}>
-                      <span className={`adm-badge ${p.pointsEarned > 0 ? 'adm-badge--success' : 'adm-badge--gray'}`}>
-                        +{p.pointsEarned}
-                      </span>
-                      {p.pointsRedeemed > 0 && (
-                        <span className="adm-badge" style={{ background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }}>
-                          -{p.pointsRedeemed}
+                    <td style={{ textAlign: 'center' }}>
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: 6, alignItems: 'center' }}>
+                        <span className={`adm-badge ${p.pointsEarned > 0 ? 'adm-badge--success' : 'adm-badge--gray'}`}>
+                          +{p.pointsEarned}
                         </span>
-                      )}
+                        {p.pointsRedeemed > 0 && (
+                          <span className="adm-badge" style={{ background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }}>
+                            -{p.pointsRedeemed}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <span className={`adm-badge ${p.isVoided ? 'adm-badge--gray' : 'adm-badge--success'}`}>
@@ -193,22 +194,6 @@ export default function SalesPage() {
                           onClick={() => navigate(`/pos?returnPurchaseId=${p.id}`)}
                         >
                           Return
-                        </button>
-                        <button
-                          className="adm-btn adm-btn--ghost adm-btn--sm"
-                          disabled={p.isVoided}
-                          onClick={async () => {
-                            const reason = prompt('Refund reason', 'Customer refund');
-                            if (!reason) return;
-                            try {
-                              await posApi.createRefund({ purchaseId: p.id, reason, method: 'original_payment' });
-                              fetchSales();
-                            } catch (err: any) {
-                              alert(err.message || 'Failed to refund sale.');
-                            }
-                          }}
-                        >
-                          Refund
                         </button>
                         <button
                           className="adm-btn adm-btn--ghost adm-btn--sm"

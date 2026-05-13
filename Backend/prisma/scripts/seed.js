@@ -43,14 +43,14 @@ const plans = [
     id: 'enterprise',
     name: 'Enterprise',
     features: [
-      'gift_cards', 'rewards_milestones', 'audit_log', 'sms_messaging', 
+      'gift_cards', 'rewards_milestones', 'audit_log', 'sms_messaging',
       'promotions_broadcasts', 'reports_exports', 'whatsapp_messaging', 'multiple_users'
     ],
     limits: [
-      { limitKey: 'max_customers',     limitValue: -1 },
-      { limitKey: 'max_users',         limitValue: -1 },
-      { limitKey: 'max_gift_cards_pm', limitValue: -1 },
-      { limitKey: 'max_sms_pm',        limitValue: -1 },
+      { limitKey: 'max_customers',     limitValue: null },
+      { limitKey: 'max_users',         limitValue: null },
+      { limitKey: 'max_gift_cards_pm', limitValue: null },
+      { limitKey: 'max_sms_pm',        limitValue: null },
     ],
   },
 ];

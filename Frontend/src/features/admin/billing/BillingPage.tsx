@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import './billing.css';
 
 // Real type placeholder for later integration
 interface Payment {
@@ -44,7 +45,7 @@ export default function BillingPage() {
             <h1 className="adm-page-title">Billing & Payments</h1>
             <p className="adm-page-subtitle">Track subscription payments and record new billing entries.</p>
           </div>
-          <button className="adm-btn adm-btn--primary">
+          <button type="button" className="adm-btn adm-btn--primary">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
             </svg>
@@ -52,8 +53,8 @@ export default function BillingPage() {
           </button>
         </div>
 
-        {/* Revenue summary card */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '14px', marginBottom: '22px' }}>
+        {/* Revenue summary cards */}
+        <div className="billing-stats-grid">
           {[
             { label: 'Filtered Revenue',  value: `LKR ${totalRevenue.toLocaleString()}` },
             { label: 'This Month',        value: `LKR 0` },
@@ -61,7 +62,7 @@ export default function BillingPage() {
           ].map(({ label, value }) => (
             <div key={label} className="adm-stat">
               <div>
-                <div className="adm-stat-value" style={{ fontSize: '1.25rem' }}>{value}</div>
+                <div className="adm-stat-value billing-stat-value">{value}</div>
                 <div className="adm-stat-label">{label}</div>
               </div>
             </div>
@@ -83,7 +84,7 @@ export default function BillingPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginLeft: 'auto' }}>
+          <span className="billing-record-count">
             {filtered.length} record{filtered.length !== 1 ? 's' : ''}
           </span>
         </div>
@@ -121,25 +122,23 @@ export default function BillingPage() {
               ) : (
                 filtered.map((p, i) => (
                   <tr key={p.id}>
-                    <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{i + 1}</td>
-                    <td style={{ fontWeight: 600 }}>{p.shop}</td>
+                    <td className="billing-td-index">{i + 1}</td>
+                    <td className="billing-td-shop">{p.shop}</td>
                     <td>
-                      <span className={`adm-badge ${PLAN_BADGE[p.plan] ?? 'adm-badge--gray'}`} style={{ textTransform: 'capitalize' }}>
+                      <span className={`adm-badge billing-badge-capitalize ${PLAN_BADGE[p.plan] ?? 'adm-badge--gray'}`}>
                         {p.plan}
                       </span>
                     </td>
-                    <td style={{ color: 'var(--text-secondary)' }}>{p.month}</td>
+                    <td className="billing-td-secondary">{p.month}</td>
                     <td>
-                      <span style={{ fontWeight: 700, color: 'var(--a-700)' }}>
-                        {p.amount.toLocaleString()}
-                      </span>
+                      <span className="billing-amount">{p.amount.toLocaleString()}</span>
                     </td>
-                    <td style={{ color: 'var(--text-secondary)' }}>{p.paidOn}</td>
+                    <td className="billing-td-secondary">{p.paidOn}</td>
                     <td>
                       {p.notes ? (
                         <span className="adm-badge adm-badge--amber">{p.notes}</span>
                       ) : (
-                        <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>—</span>
+                        <span className="billing-empty-dash">—</span>
                       )}
                     </td>
                   </tr>

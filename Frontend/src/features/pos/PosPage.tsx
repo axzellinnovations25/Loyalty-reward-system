@@ -7,6 +7,7 @@ import { promotionsApi } from '../../api/promotions';
 import { posApi } from '../../api/pos';
 import { settingsApi } from '../../api/settings';
 import { redemptionsApi } from '../../api/redemptions';
+import { giftCardsApi } from '../../api/giftCards';
 import type { Product, ProductCategory, Customer } from '../../types';
 import type { HeldOrder, RegisterShift } from '../../types/pos';
 import { useAuth } from '../../hooks/useAuth';
@@ -61,8 +62,9 @@ export default function PosPage() {
   const [promoPreview, setPromoPreview] = useState<any>(null);
   const [promoLoading, setPromoLoading] = useState(false);
   const [managerPassword, setManagerPassword] = useState('');
+  const [showManagerPassword, setShowManagerPassword] = useState(false);
   const [showManagerPrompt, setShowManagerPrompt] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'gift_card' | 'split'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'gift_card'>('cash');
   const [cashReceived, setCashReceived] = useState('');
   const [cardReference, setCardReference] = useState('');
   const [receipt, setReceipt] = useState<ReceiptSnapshot | null>(null);
@@ -84,6 +86,15 @@ export default function PosPage() {
   const [success, setSuccess] = useState(false);
   const [returningPurchaseId, setReturningPurchaseId] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  // Gift Card Modal State
+  const [showGiftCardModal, setShowGiftCardModal] = useState(false);
+  const [giftCardCode, setGiftCardCode] = useState('');
+  const [giftCardLoading, setGiftCardLoading] = useState(false);
+  const [giftCardError, setGiftCardError] = useState<string | null>(null);
+  const [verifiedGiftCard, setVerifiedGiftCard] = useState<any>(null);
+  const [balancePaymentMethod, setBalancePaymentMethod] = useState<'cash'|'card'>('cash');
+  const [balanceCashReceived, setBalanceCashReceived] = useState('');
 
   // Loyalty State
   const [settings, setSettings] = useState<any>(null);
@@ -295,8 +306,7 @@ export default function PosPage() {
     return Math.floor(payableTotal / Number(settings.pointsPerAmount));
   }, [payableTotal, settings]);
   const paidAmount = useMemo(() => {
-    if (paymentMethod === 'cash' || paymentMethod === 'split') {
-      if (cashReceived === '') return payableTotal;
+    if (paymentMethod === 'cash') {
       return Number(cashReceived || 0);
     }
     return payableTotal;
@@ -419,8 +429,14 @@ export default function PosPage() {
     }
   }, [createPhone, newCustomerName]);
 
-  const handleCheckout = async () => {
+  const handleCheckout = async (skipGiftCardCheck = false, giftCardExtraData?: any) => {
     if (cart.length === 0) return;
+
+    if (paymentMethod === 'gift_card' && !skipGiftCardCheck) {
+      setShowGiftCardModal(true);
+      return;
+    }
+
     setIsProcessing(true);
     setError(null);
     try {
@@ -431,8 +447,13 @@ export default function PosPage() {
         setShowManagerPrompt(true);
         throw new Error('Manager password required for price override.');
       }
-      if ((paymentMethod === 'cash' || paymentMethod === 'split') && paidAmount < payableTotal) {
-        throw new Error('Cash received is less than the total due.');
+      if (paymentMethod === 'cash') {
+        if (cashReceived === '') {
+          throw new Error('Please enter the cash received amount.');
+        }
+        if (paidAmount < payableTotal) {
+          throw new Error('Cash received is less than the total due.');
+        }
       }
 
       const itemsPayload = cart.map((ci) => ({
@@ -448,26 +469,67 @@ export default function PosPage() {
         await purchasesApi.void(returningPurchaseId);
       }
 
+      let paymentsPayload = [];
+      let finalPaidAmount = paidAmount;
+
+      if (paymentMethod === 'gift_card' && giftCardExtraData?.giftCard) {
+        const cv = Number(giftCardExtraData.giftCard.value);
+        if (cv >= payableTotal) {
+          paymentsPayload.push({
+            tenderType: 'gift_card',
+            amount: payableTotal,
+            reference: giftCardExtraData.giftCard.code,
+            status: 'captured',
+          });
+          finalPaidAmount = payableTotal;
+        } else {
+          paymentsPayload.push({
+            tenderType: 'gift_card',
+            amount: cv,
+            reference: giftCardExtraData.giftCard.code,
+            status: 'captured',
+          });
+          if (giftCardExtraData.balanceData) {
+             const { method, received } = giftCardExtraData.balanceData;
+             const balanceDue = payableTotal - cv;
+             const amountReceived = method === 'cash' ? (received || balanceDue) : balanceDue;
+             paymentsPayload.push({
+               tenderType: method,
+               amount: amountReceived,
+               reference: null,
+               status: 'captured',
+             });
+             finalPaidAmount = cv + amountReceived;
+          }
+        }
+      } else {
+        paymentsPayload.push({
+          tenderType: paymentMethod,
+          amount: paidAmount,
+          reference: cardReference.trim() || null,
+          status: 'captured',
+        });
+      }
+
       const payload = {
         customerId: selectedCustomer.id,
         items: itemsPayload,
         couponCode: couponCode.trim() ? couponCode.trim().toUpperCase() : null,
         managerPassword: hasPriceOverrides ? managerPassword.trim() : null,
         paymentMethod,
-        paidAmount,
+        paidAmount: finalPaidAmount,
         shiftId: currentShift?.id || null,
         redemptionPoints: applyRedemption ? redemptionPoints : 0,
-        payments: [{
-          tenderType: paymentMethod,
-          amount: paidAmount,
-          reference: cardReference.trim() || null,
-          status: 'captured',
-        }],
+        payments: paymentsPayload,
         createKitchenTicket: true,
       };
 
       const created = await purchasesApi.create(payload);
       const savedPurchase = (created as any).data ?? created;
+
+      const finalPaymentMethodLabel = paymentMethod === 'gift_card' && giftCardExtraData?.balanceData 
+        ? `Gift Card & ${giftCardExtraData.balanceData.method === 'cash' ? 'Cash' : 'Card'}`
+        : paymentMethod;
 
       setReceipt({
         id: savedPurchase?.id || `receipt_${Date.now()}`,
@@ -479,9 +541,9 @@ export default function PosPage() {
         discount: discountTotal,
         tax: taxTotal,
         total: payableTotal,
-        paymentMethod,
-        paid: paidAmount,
-        change: changeDue,
+        paymentMethod: finalPaymentMethodLabel,
+        paid: finalPaidAmount,
+        change: Math.max(0, finalPaidAmount - payableTotal),
         pointsEarned: savedPurchase?.pointsEarned ?? pointsEarned,
         pointsRedeemed: applyRedemption ? redemptionPoints : 0,
         totalPoints: Math.max(0, (selectedCustomer?.totalPoints || 0) + (savedPurchase?.pointsEarned ?? pointsEarned) - (applyRedemption ? redemptionPoints : 0)),
@@ -494,6 +556,8 @@ export default function PosPage() {
       setCouponCode('');
       setCashReceived('');
       setCardReference('');
+      setVerifiedGiftCard(null);
+      setBalanceCashReceived('');
       setSuccess(true);
     } catch (err: any) {
       const isNetworkError = /failed to fetch|network|load failed/i.test(String(err?.message || ''));
@@ -526,6 +590,63 @@ export default function PosPage() {
       setError(err.message || 'Checkout failed.');
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleVerifyGiftCard = async () => {
+    if (!giftCardCode.trim()) return;
+    setGiftCardLoading(true);
+    setGiftCardError(null);
+    try {
+      const res = await giftCardsApi.validate(giftCardCode.trim().toUpperCase());
+      setVerifiedGiftCard((res as any).data ?? res);
+    } catch (err: any) {
+      setGiftCardError(err.message || 'Invalid or already used gift card.');
+    } finally {
+      setGiftCardLoading(false);
+    }
+  };
+
+  const processGiftCardAndCheckout = async () => {
+    if (!verifiedGiftCard) return;
+    const cardValue = Number(verifiedGiftCard.value);
+    
+    if (cardValue < payableTotal) {
+      // Card value is less than purchase — customer must pay the balance
+      if (balancePaymentMethod === 'cash' && balanceCashReceived === '') {
+        setGiftCardError('Please enter the cash received amount for the remaining balance.');
+        return;
+      }
+      if (balancePaymentMethod === 'cash') {
+        const received = Number(balanceCashReceived || 0);
+        const balanceDue = payableTotal - cardValue;
+        if (received < balanceDue) {
+          setGiftCardError(`Cash received (${toMoney(received)}) is less than the balance due (${toMoney(balanceDue)}).`);
+          return;
+        }
+      }
+    }
+    // If cardValue >= payableTotal: card covers the full purchase.
+    // Any excess value on the card is forfeited — the card is one-time-use only.
+    
+    setGiftCardLoading(true);
+    setGiftCardError(null);
+    try {
+      await giftCardsApi.redeem({ code: verifiedGiftCard.code });
+      
+      setShowGiftCardModal(false);
+      setGiftCardCode('');
+      const balanceData = cardValue < payableTotal
+        ? { method: balancePaymentMethod, received: balancePaymentMethod === 'cash' ? Number(balanceCashReceived) : undefined }
+        : null;
+      const cardRef = verifiedGiftCard;
+      setVerifiedGiftCard(null);
+      setGiftCardLoading(false);
+      
+      await handleCheckout(true, { giftCard: cardRef, balanceData });
+    } catch (err: any) {
+      setGiftCardError(err.message || 'Failed to complete checkout.');
+      setGiftCardLoading(false);
     }
   };
 
@@ -595,8 +716,168 @@ export default function PosPage() {
     }
   };
 
+  // Gift card modal computed values (derived from state, used in JSX below)
+  const gcCardValue = verifiedGiftCard ? Number(verifiedGiftCard.value) : 0;
+  const gcBalanceDue = Math.max(0, payableTotal - gcCardValue);
+  const gcExcess = Math.max(0, gcCardValue - payableTotal);
+  const gcIsPartial = verifiedGiftCard && gcCardValue < payableTotal;
+  const gcIsExcess = verifiedGiftCard && gcCardValue > payableTotal;
+  const gcBalanceCashMissing = gcIsPartial && balancePaymentMethod === 'cash' && !balanceCashReceived.trim();
+  const gcBalanceCashShort = gcIsPartial && balancePaymentMethod === 'cash' && Number(balanceCashReceived || 0) < gcBalanceDue;
+
   return (
     <div className="pos-page">
+      {showGiftCardModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18 }}>
+          <div className="adm-card" style={{ width: 'min(500px, 100%)', padding: 20 }}>
+            <div style={{ fontWeight: 900, fontSize: '1.1rem', marginBottom: 4 }}>🎁 Gift Card Payment</div>
+            <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: 14 }}>
+              Enter the gift card code to verify before completing the sale.
+            </div>
+
+            {giftCardError && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: 6, padding: '8px 12px', fontSize: '0.85rem', fontWeight: 600, marginBottom: 12 }}>
+                {giftCardError}
+              </div>
+            )}
+
+            {!verifiedGiftCard ? (
+              // ── Step 1: Enter & verify the card code ──
+              <form onSubmit={(e) => { e.preventDefault(); handleVerifyGiftCard(); }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
+                  GIFT CARD NUMBER
+                </label>
+                <input
+                  className="adm-input"
+                  type="text"
+                  value={giftCardCode}
+                  onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
+                  placeholder="e.g. A1B2C3D4"
+                  autoFocus
+                  style={{ fontFamily: 'monospace', textTransform: 'uppercase', fontSize: '1.15rem', letterSpacing: 2, marginBottom: 14 }}
+                />
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                  <button type="button" className="adm-btn adm-btn--ghost" onClick={() => { setShowGiftCardModal(false); setGiftCardCode(''); setGiftCardError(null); setIsProcessing(false); }}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="adm-btn adm-btn--primary" disabled={!giftCardCode.trim() || giftCardLoading}>
+                    {giftCardLoading ? 'Verifying…' : 'Verify Card'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              // ── Step 2: Card verified — show breakdown ──
+              <div>
+                {/* Card verified badge */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 12px', marginBottom: 14 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span style={{ fontWeight: 700, color: '#065f46', fontSize: '0.85rem' }}>Card Verified — {verifiedGiftCard.code}</span>
+                </div>
+
+                {/* Amount breakdown */}
+                <div style={{ background: 'var(--shop-bg, #f8fafc)', borderRadius: 8, padding: 12, marginBottom: 14, display: 'grid', gap: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>Purchase Total</span>
+                    <span style={{ fontWeight: 700 }}>{toMoney(payableTotal)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>Gift Card Value</span>
+                    <span style={{ fontWeight: 700, color: '#059669' }}>{toMoney(gcCardValue)}</span>
+                  </div>
+
+                  {gcIsPartial && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, borderTop: '1px dashed var(--shop-border, #e2e8f0)', marginTop: 4 }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Remaining Balance Due</span>
+                      <span style={{ fontWeight: 900, color: '#dc2626', fontSize: '1rem' }}>{toMoney(gcBalanceDue)}</span>
+                    </div>
+                  )}
+
+                  {gcIsExcess && (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, borderTop: '1px dashed var(--shop-border, #e2e8f0)', marginTop: 4 }}>
+                        <span style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>Gift Card covers full purchase</span>
+                        <span style={{ fontWeight: 700, color: '#059669' }}>&#10003;</span>
+                      </div>
+                      <div style={{ background: '#fefce8', border: '1px solid #fde68a', borderRadius: 6, padding: '6px 10px', marginTop: 4 }}>
+                        <span style={{ fontSize: '0.8rem', color: '#92400e', fontWeight: 600 }}>
+                          &#9888; Card value exceeds the purchase by {toMoney(gcExcess)}. This card is one-time use — the remaining balance ({toMoney(gcExcess)}) is forfeited and cannot be used again.
+                        </span>
+                      </div>
+                    </>
+                  )}
+
+                  {!gcIsPartial && !gcIsExcess && (
+                    <div style={{ paddingTop: 8, borderTop: '1px dashed var(--shop-border, #e2e8f0)', marginTop: 4, fontSize: '0.85rem', color: '#059669', fontWeight: 700 }}>
+                      &#10003; Card value exactly matches the purchase.
+                    </div>
+                  )}
+                </div>
+
+                {/* Balance payment method — only shown when card value < purchase */}
+                {gcIsPartial && (
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
+                      PAYMENT METHOD FOR REMAINING {toMoney(gcBalanceDue)}
+                    </label>
+                    <select
+                      className="adm-input"
+                      value={balancePaymentMethod}
+                      onChange={(e) => { setBalancePaymentMethod(e.target.value as 'cash' | 'card'); setBalanceCashReceived(''); }}
+                      style={{ marginBottom: 8 }}
+                    >
+                      <option value="cash">Cash</option>
+                      <option value="card">Card</option>
+                    </select>
+                    {balancePaymentMethod === 'cash' && (
+                      <>
+                        <input
+                          className="adm-input"
+                          placeholder={`Cash received (min ${toMoney(gcBalanceDue)})`}
+                          value={balanceCashReceived}
+                          onChange={(e) => setBalanceCashReceived(e.target.value)}
+                          inputMode="decimal"
+                          autoFocus
+                        />
+                        {balanceCashReceived && Number(balanceCashReceived) >= gcBalanceDue && (
+                          <div style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 600, marginTop: 4 }}>
+                            Change due: {toMoney(Number(balanceCashReceived) - gcBalanceDue)}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* One-time use notice */}
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 14, padding: '6px 10px', background: 'rgba(15,23,42,0.04)', borderRadius: 6 }}>
+                  &#8505;&#65039; This gift card will be permanently marked as <strong>used</strong> after this transaction and cannot be reused.
+                </div>
+
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    className="adm-btn adm-btn--ghost"
+                    onClick={() => { setShowGiftCardModal(false); setGiftCardCode(''); setVerifiedGiftCard(null); setGiftCardError(null); setBalanceCashReceived(''); setIsProcessing(false); }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="adm-btn adm-btn--primary"
+                    onClick={processGiftCardAndCheckout}
+                    disabled={giftCardLoading || gcBalanceCashMissing || gcBalanceCashShort}
+                    title={gcBalanceCashMissing ? 'Enter cash received for the balance' : gcBalanceCashShort ? 'Cash received is less than balance due' : ''}
+                  >
+                    {giftCardLoading ? 'Processing…' : 'Complete Sale'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       {showManagerPrompt && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18 }}>
           <div className="adm-card" style={{ width: 'min(480px, 100%)', padding: 18 }}>
@@ -604,13 +885,42 @@ export default function PosPage() {
             <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 12 }}>
               One or more line items have a price override. Enter the owner password to continue.
             </div>
-            <input
-              className="adm-input"
-              type="password"
-              value={managerPassword}
-              onChange={(e) => setManagerPassword(e.target.value)}
-              placeholder="Owner password"
-            />
+            <div className="pos-manager-input-wrap" style={{ position: 'relative' }}>
+              <input
+                className="adm-input"
+                type={showManagerPassword ? 'text' : 'password'}
+                value={managerPassword}
+                onChange={(e) => setManagerPassword(e.target.value)}
+                placeholder="Owner password"
+                style={{ width: '100%' }}
+              />
+              <button
+                type="button"
+                style={{
+                  position: 'absolute',
+                  right: 12,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-secondary, #64748b)',
+                  cursor: 'pointer',
+                  padding: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 2
+                }}
+                onClick={() => setShowManagerPassword(!showManagerPassword)}
+                aria-label={showManagerPassword ? 'Hide password' : 'Show password'}
+              >
+                {showManagerPassword ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                )}
+              </button>
+            </div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 12 }}>
               <button className="adm-btn adm-btn--ghost" onClick={() => { setShowManagerPrompt(false); setManagerPassword(''); }}>
                 Cancel
@@ -1124,9 +1434,8 @@ export default function PosPage() {
               <option value="cash">Cash</option>
               <option value="card">Card</option>
               <option value="gift_card">Gift Card</option>
-              <option value="split">Split Payment</option>
             </select>
-            {(paymentMethod === 'cash' || paymentMethod === 'split') && (
+            {paymentMethod === 'cash' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center' }}>
                 <input
                   className="pos-customer-input"
@@ -1140,7 +1449,7 @@ export default function PosPage() {
                 </div>
               </div>
             )}
-            {(paymentMethod === 'card' || paymentMethod === 'split') && (
+            {paymentMethod === 'card' && (
               <input
                 className="pos-customer-input"
                 placeholder="Card reference (optional)"
@@ -1152,10 +1461,15 @@ export default function PosPage() {
           
           <button 
             className="pos-checkout-btn"
-            disabled={cart.length === 0 || isProcessing}
-            onClick={handleCheckout}
+            disabled={
+              cart.length === 0 ||
+              isProcessing ||
+              (paymentMethod === 'cash' && !cashReceived.trim())
+            }
+            title={paymentMethod === 'cash' && !cashReceived.trim() ? 'Enter cash received amount to continue' : undefined}
+            onClick={() => handleCheckout(false)}
           >
-            {isProcessing ? 'Processing...' : 'Complete Sale'}
+            {isProcessing ? 'Processing…' : 'Complete Sale'}
           </button>
         </div>
       </aside>

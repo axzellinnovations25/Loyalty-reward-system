@@ -13,6 +13,18 @@ async function getById(id) {
 }
 
 async function create(data) {
+  // Admin can only create the shop owner account.
+  // Staff members are managed exclusively by the shop owner.
+  if (data.shopId) {
+    const existingOwner = await repository.findOwner(data.shopId);
+    if (existingOwner) {
+      throw Object.assign(
+        new Error('This shop already has an owner account. Staff accounts are managed by the shop owner, not the admin.'),
+        { status: 409 }
+      );
+    }
+  }
+
   const existing = await db.user.findUnique({ 
     where: { username: data.username } 
   });
@@ -26,11 +38,12 @@ async function create(data) {
 async function update(id, data) {
   const user = await getById(id);
 
-  // Requirement: admin can't make a user account active while the shop is disabled.
+  // Admin can only toggle the owner account, not staff accounts.
+  // Staff accounts are managed by the shop owner.
   if (data.isActive === true) {
     const shop = await db.shop.findUnique({ where: { id: user.shopId } });
     if (!shop || !shop.isActive) {
-      throw Object.assign(new Error('Cannot activate staff account while shop is disabled'), { status: 400 });
+      throw Object.assign(new Error('Cannot activate the owner account while the shop is disabled'), { status: 400 });
     }
   }
 

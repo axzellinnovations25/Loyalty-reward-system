@@ -660,8 +660,8 @@
   position: fixed;
   inset: 0;
   background: rgba(15, 10, 12, 0.55);
-  backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
   z-index: 200;
   display: flex;
   align-items: center;
@@ -782,8 +782,8 @@
   font-size: 0.875rem;
   color: var(--text-primary);
   background: var(--white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a6875' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 10px center;
-  appearance: none;
   -webkit-appearance: none;
+  appearance: none;
   outline: none;
   cursor: pointer;
   transition: border-color 0.2s, box-shadow 0.2s;

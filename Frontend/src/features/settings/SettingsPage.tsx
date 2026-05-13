@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { settingsApi } from '../../api/settings';
 import type { ShopSettings, UpdateShopSettingsRequest } from '../../types';
+import ChangePasswordModal from '../auth/ChangePasswordModal';
 import './settings-page.css';
 
 /* ── helpers ─────────────────────────────────────────────────── */
@@ -23,6 +24,7 @@ export default function SettingsPage() {
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
   const [toast,    setToast]    = useState<Toast>(null);
+  const [isCPModalOpen, setIsCPModalOpen] = useState(false);
 
 
   /* ── form state – all start empty until loaded from API ───── */
@@ -379,7 +381,31 @@ export default function SettingsPage() {
                 </div>
                 <span className="settings-hint">Notify customer this many days before expiry</span>
               </div>
+            </div>
+          </div>
+        </div>
 
+        <div className="settings-card">
+          <div className="settings-card-header">
+            <div className="settings-card-icon"><LockIcon /></div>
+            <div>
+              <h2 className="settings-card-title">Account Security</h2>
+              <p className="settings-card-desc">Manage your owner account password</p>
+            </div>
+          </div>
+          <div className="settings-card-body">
+            <div className="settings-security-box">
+              <div className="settings-security-info">
+                <p className="settings-security-text">Keep your account secure by regularly updating your password.</p>
+                <button 
+                  type="button" 
+                  className="adm-btn adm-btn--ghost"
+                  onClick={() => setIsCPModalOpen(true)}
+                  style={{ marginTop: '12px' }}
+                >
+                  <LockIcon /> Change Account Password
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -402,6 +428,11 @@ export default function SettingsPage() {
         </div>
 
       </div>{/* /settings-body */}
+
+      {/* ── Change Password Modal ──────────────────────────── */}
+      {isCPModalOpen && (
+        <ChangePasswordModal onClose={() => setIsCPModalOpen(false)} />
+      )}
 
       {/* ── Toast notification ──────────────────────────────── */}
       {toast && (
@@ -465,6 +496,15 @@ function AlertIcon() {
       <circle cx="12" cy="12" r="10" />
       <line x1="12" y1="8" x2="12" y2="12" />
       <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
     </svg>
   );
 }

@@ -419,3 +419,22 @@
     padding: 20px;
   }
 }
+
+/* ── Security Section ───────────────────────────── */
+.settings-security-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.settings-security-text {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #475569;
+  font-weight: 500;
+  line-height: 1.5;
+}

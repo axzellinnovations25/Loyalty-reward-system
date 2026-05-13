@@ -1,0 +1,326 @@
+/* ── PlansPage styles ─────────────────────────────────────────────── */
+
+/* ── Page shell ──────────────────────────────────────────────────── */
+.plans-root {
+  background: var(--n-50);
+  min-height: 100vh;
+}
+.plans-topbar {
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+}
+.plans-topbar-right { display: flex; gap: 12px; }
+
+/* ── Billing cycle toggle ─────────────────────────────────────────── */
+.plans-cycle-wrap {
+  background: var(--n-100);
+  padding: 4px;
+  border-radius: var(--r-md);
+  display: flex;
+  gap: 2px;
+  border: 1px solid var(--border);
+}
+.plans-cycle-btn {
+  padding: 6px 16px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: var(--font);
+}
+.plans-cycle-btn--active {
+  background: var(--white);
+  color: var(--a-800);
+  box-shadow: var(--shadow-sm);
+}
+.plans-cycle-btn--idle {
+  background: transparent;
+  color: var(--text-secondary);
+  box-shadow: none;
+}
+
+/* ── Page content area ───────────────────────────────────────────── */
+.plans-page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+
+/* ── Intro section ───────────────────────────────────────────────── */
+.plans-intro { text-align: center; margin-bottom: 64px; }
+
+.plans-intro-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--a-50);
+  color: var(--a-700);
+  padding: 6px 12px;
+  border-radius: 100px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.plans-intro-pill-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.plans-intro-h1 {
+  font-size: 3rem;
+  font-weight: 900;
+  color: var(--text-primary);
+  letter-spacing: -0.05em;
+  margin-bottom: 16px;
+}
+.plans-intro-accent { color: var(--a-600); }
+
+.plans-intro-p {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* ── Loading state ───────────────────────────────────────────────── */
+.plans-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 80px 0;
+  gap: 20px;
+}
+.plans-loading-spinner { width: 40px; height: 40px; }
+.plans-loading-text {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* ── Error state ─────────────────────────────────────────────────── */
+.plans-error {
+  background: #fff;
+  border: 1px solid #fee2e2;
+  border-radius: var(--r-xl);
+  padding: 60px;
+}
+.plans-error-emoji { font-size: 3rem; margin-bottom: 20px; }
+.plans-error-title { color: #991b1b; }
+.plans-error-desc  { max-width: 400px; margin: 12px auto 0; }
+
+/* ── Plan grid ───────────────────────────────────────────────────── */
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 32px;
+  margin-bottom: 100px;
+}
+
+/* ── Plan card ───────────────────────────────────────────────────── */
+.plans-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -2px rgba(0,0,0,0.02);
+  transition: transform 0.3s;
+}
+.plans-card--pro {
+  border: 2px solid var(--a-600);
+  box-shadow: 0 32px 64px -16px rgba(128, 0, 32, 0.12);
+}
+
+/* ── Pro badge ───────────────────────────────────────────────────── */
+.plans-pro-badge {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: var(--a-600);
+  color: #fff;
+  padding: 4px 12px;
+  border-radius: 100px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+/* ── Plan card header ────────────────────────────────────────────── */
+.plans-card-header { margin-bottom: 40px; }
+.plans-card-name {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 24px;
+}
+.plans-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.plans-price {
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: var(--text-primary);
+  letter-spacing: -0.05em;
+}
+.plans-price-period {
+  font-size: 1rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* ── Limits box ──────────────────────────────────────────────────── */
+.plans-limits {
+  background: var(--n-50);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.plans-limit-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.plans-limit-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.plans-limit-icon { color: var(--a-600); display: flex; }
+.plans-limit-label { font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); }
+.plans-limit-value { font-size: 0.85rem; font-weight: 800; color: var(--text-primary); }
+
+/* ── Features section ────────────────────────────────────────────── */
+.plans-features { flex: 1; }
+.plans-features-heading {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 20px;
+}
+.plans-feature-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.plans-feature-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+}
+.plans-feature-item--active { color: var(--text-primary); opacity: 1; }
+.plans-feature-item--idle   { color: var(--text-muted);   opacity: 0.4; }
+.plans-feature-name--active { font-weight: 500; }
+.plans-feature-name--idle   { font-weight: 400; }
+
+/* ── CTA button ──────────────────────────────────────────────────── */
+.plans-cta-btn {
+  width: 100%;
+  margin-top: 40px;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: not-allowed;
+  font-family: var(--font);
+}
+.plans-cta-btn--pro {
+  background: var(--a-600);
+  color: #fff;
+  box-shadow: 0 10px 15px -3px rgba(128, 0, 32, 0.2);
+}
+.plans-cta-btn--default {
+  background: var(--n-100);
+  color: var(--text-muted);
+  box-shadow: none;
+}
+
+/* ── CheckIcon ───────────────────────────────────────────────────── */
+.plans-check-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.plans-check-icon--active { background: var(--success-bg, #ecfdf5); color: var(--success, #10b981); }
+.plans-check-icon--idle   { background: transparent; color: var(--text-muted, #9ca3af); }
+.plans-check-svg--active  { opacity: 1; }
+.plans-check-svg--idle    { opacity: 0.2; }
+
+/* ── Matrix section ──────────────────────────────────────────────── */
+.plans-matrix {
+  background: var(--white);
+  border-radius: 32px;
+  padding: 60px;
+  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.03), 0 10px 10px -5px rgba(0,0,0,0.02);
+  border: 1px solid var(--border);
+}
+.plans-matrix-header { margin-bottom: 48px; }
+.plans-matrix-h2 {
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: var(--text-primary);
+  letter-spacing: -0.04em;
+  margin-bottom: 12px;
+}
+.plans-matrix-p { color: var(--text-secondary); font-size: 0.95rem; }
+
+.plans-matrix-scroll { overflow-x: auto; }
+.plans-matrix-table  { width: 100%; border-collapse: collapse; }
+
+.plans-matrix-th-feature {
+  text-align: left;
+  padding: 24px;
+  background: var(--n-50);
+  border-radius: 16px 0 0 16px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+.plans-matrix-th-plan {
+  padding: 24px;
+  background: var(--n-50);
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  font-weight: 800;
+}
+.plans-matrix-th-plan--last { border-radius: 0 16px 16px 0; }
+
+.plans-matrix-tr { border-bottom: 1px solid var(--n-50); }
+.plans-matrix-td-feature {
+  padding: 24px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.plans-matrix-td-check { text-align: center; padding: 24px; }
+.plans-matrix-check-wrap { display: inline-flex; }
+
+/* ── Bottom spacer ───────────────────────────────────────────────── */
+.plans-spacer { height: 100px; }

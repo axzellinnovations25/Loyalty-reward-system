@@ -397,7 +397,7 @@ export default function ScanGiftCardPage() {
 
               {/* QR mode */}
               {mode === 'qr' && (
-                <QrScanner key={scannerKey} onDetected={processCode} onSwitchToManual={() => handleModeChange('manual')} />
+                <QrScanner key={scannerKey} onDetected={processCode} />
               )}
 
               {/* Manual mode */}

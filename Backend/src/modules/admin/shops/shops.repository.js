@@ -29,22 +29,41 @@ async function findById(id) {
   });
 }
 
-async function create({ name, email, contactInfo, planId, planAssignedBy }) {
+const bcrypt = require('bcryptjs');
+
+async function create({ 
+  name, email, phone, planId, planAssignedBy,
+  ownerName, ownerUsername, ownerPassword 
+}) {
   return db.$transaction(async (tx) => {
+    // 1. Create the shop
     const shop = await tx.shop.create({
       data: {
         name,
         email,
-        contactInfo: contactInfo || null,
+        phone: phone || null,
         planId,
         planAssignedAt: new Date(),
         planAssignedBy: planAssignedBy || null,
       },
     });
 
-    // Create default settings for the new shop
+    // 2. Create default settings for the new shop
     await tx.shopSettings.create({
       data: { shopId: shop.id },
+    });
+
+    // 3. Create the owner user — force password change on first login
+    const passwordHash = await bcrypt.hash(ownerPassword, 12);
+    await tx.user.create({
+      data: {
+        shopId: shop.id,
+        name: ownerName,
+        username: ownerUsername,
+        passwordHash,
+        isActive: true,
+        forcePasswordChange: true,
+      },
     });
 
     return tx.shop.findUnique({

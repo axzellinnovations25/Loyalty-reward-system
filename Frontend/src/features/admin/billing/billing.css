@@ -1,0 +1,45 @@
+/* ── BillingPage styles ───────────────────────────────────────────── */
+
+.billing-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.billing-stat-value {
+  font-size: 1.25rem;
+}
+
+.billing-record-count {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-left: auto;
+}
+
+.billing-td-index {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.billing-td-shop {
+  font-weight: 600;
+}
+
+.billing-td-secondary {
+  color: var(--text-secondary);
+}
+
+.billing-badge-capitalize {
+  text-transform: capitalize;
+}
+
+.billing-amount {
+  font-weight: 700;
+  color: var(--a-700);
+}
+
+.billing-empty-dash {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}

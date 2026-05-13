@@ -12,19 +12,22 @@ async function getById(id) {
 }
 
 async function create(body, adminId) {
-  const { name, email, contactInfo, planId } = body;
+  const { name, email, phone, planId, ownerName, ownerUsername, ownerPassword } = body;
 
   // Verify the plan exists and is active
   const plan = await db.plan.findUnique({ where: { id: planId } });
   if (!plan) throw Object.assign(new Error(`Plan '${planId}' not found`), { status: 404 });
   if (!plan.isActive) throw Object.assign(new Error(`Plan '${planId}' is inactive`), { status: 400 });
 
-  return repository.create({ name, email, contactInfo, planId, planAssignedBy: adminId });
+  return repository.create({ 
+    name, email, phone, planId, planAssignedBy: adminId,
+    ownerName, ownerUsername, ownerPassword
+  });
 }
 
 async function update(id, data) {
   await getById(id);
-  
+
   return db.$transaction(async (tx) => {
     const updatedShop = await tx.shop.update({
       where: { id },
@@ -44,4 +47,38 @@ async function update(id, data) {
   });
 }
 
-module.exports = { list, getById, create, update };
+async function assignPlan(id, planId, note, adminId) {
+  const shop = await getById(id);
+
+  const plan = await db.plan.findUnique({ where: { id: planId } });
+  if (!plan)         throw Object.assign(new Error(`Plan '${planId}' not found`),    { status: 404 });
+  if (!plan.isActive) throw Object.assign(new Error(`Plan '${planId}' is inactive`), { status: 400 });
+
+  return db.$transaction(async (tx) => {
+    const updated = await tx.shop.update({
+      where: { id },
+      data: {
+        planId,
+        planAssignedAt: new Date(),
+        planAssignedBy: adminId || null,
+      },
+      include: { plan: true },
+    });
+
+    if (shop.planId !== planId) {
+      await tx.planChangeHistory.create({
+        data: {
+          shopId:    id,
+          oldPlanId: shop.planId,
+          newPlanId: planId,
+          changedBy: adminId,
+          note:      note || null,
+        },
+      });
+    }
+
+    return updated;
+  });
+}
+
+module.exports = { list, getById, create, update, assignPlan };
